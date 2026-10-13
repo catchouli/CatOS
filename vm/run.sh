@@ -5,7 +5,8 @@
 #
 #   arm64      out/meownix-arm64.iso with Apple's Virtualization framework (via vfkit):
 #              near-native speed on Apple Silicon. The default on an ARM Mac; use it
-#              for testing. Always opens a window; quit vfkit to stop it.
+#              for testing. Always opens a window (Ctrl+Cmd+F for full screen);
+#              quit vfkit to stop it. 1280x720: the guest draws in software.
 #   amd64      out/meownix-amd64.iso, the image for the real box. x86 is emulated
 #              on an ARM Mac, so it's very slow: only for checking that it boots.
 #
@@ -48,7 +49,7 @@ case $arch in
             --bootloader efi,variable-store="$state/efi-vars-vfkit",create \
             --device usb-mass-storage,path="$iso",readonly \
             --device virtio-net,nat \
-            --device virtio-gpu,width=1920,height=1080 \
+            --device virtio-gpu,width=1280,height=720 \
             --device virtio-input,keyboard \
             --device virtio-input,pointing \
             --device virtio-rng \
