@@ -1,0 +1,27 @@
+#!/bin/sh
+# Starts the TV session: cage (kiosk compositor) running the crossbar menu.
+# Apps launched from the menu open as new fullscreen windows on top of it;
+# when they close, cage shows the menu again.
+
+export XDG_SESSION_TYPE=wayland
+export MOZ_ENABLE_WAYLAND=1
+export SDL_VIDEODRIVER=wayland
+export LIBVA_DRIVER_NAME="${LIBVA_DRIVER_NAME:-iHD}"
+
+# Virtual GPUs have no hardware cursor planes and often no usable GL.
+if systemd-detect-virt -q; then
+    export WLR_NO_HARDWARE_CURSORS=1
+    export WLR_RENDERER=pixman
+    unset LIBVA_DRIVER_NAME
+fi
+
+mkdir -p "$HOME/.local/state/meownix"
+log="$HOME/.local/state/meownix/session.log"
+[ -f "$log" ] && mv "$log" "$log.old"
+
+# -d: no client-side decorations, -s: allow VT switching (Ctrl+Alt+F2 for a shell)
+cage -d -s -- /usr/local/bin/meownix-menu >"$log" 2>&1
+
+# If the session dies, wait a moment before getty logs us back in, so a
+# broken session can't spin the CPU.
+sleep 3

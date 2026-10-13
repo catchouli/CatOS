@@ -1,0 +1,22 @@
+#!/bin/sh
+# live-build configuration for meownix. `lb config` calls this automatically.
+set -e
+
+lb config noauto \
+  --mode debian \
+  --distribution trixie \
+  --architecture amd64 \
+  --archive-areas "main contrib non-free non-free-firmware" \
+  --apt-recommends false \
+  --binary-images iso-hybrid \
+  --bootloaders "grub-efi,syslinux" \
+  --debian-installer none \
+  --firmware-binary false \
+  --firmware-chroot false \
+  --memtest none \
+  --security true \
+  --updates true \
+  --iso-application "meownix" \
+  --iso-volume "MEOWNIX" \
+  --bootappend-live "boot=live components quiet loglevel=3 vt.global_cursor_default=0 hostname=meownix username=tv timezone=Europe/London locales=en_GB.UTF-8" \
+  "${@}"

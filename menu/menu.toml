@@ -1,0 +1,59 @@
+# meownix menu. Installed as /etc/meownix/menu.toml; a copy in
+# ~/.config/meownix/menu.toml overrides it.
+#
+# Icons: tv, gear, play, youtube, film, power, restart, network
+
+[controls]
+# Linux key names (run `evtest` on the box to see what the remote sends).
+# These close the open app and return to the menu.
+home_keys = ["KEY_HOMEPAGE"]
+# These do the same when held down for hold_seconds.
+hold_keys = ["KEY_BACK", "KEY_ESC"]
+hold_seconds = 1.0
+
+[[category]]
+name = "Watch"
+icon = "tv"
+
+  [[category.item]]
+  name = "Flex"
+  icon = "film"
+  description = "Our media library"
+  command = ["meownix-browser", "flex", "http://192.168.1.110:8484"]
+
+  [[category.item]]
+  name = "FreeTube"
+  icon = "play"
+  description = "YouTube without the ads or tracking"
+  command = ["freetube", "--ozone-platform-hint=auto"]
+
+  [[category.item]]
+  name = "YouTube"
+  icon = "youtube"
+  description = "YouTube's TV interface in Firefox"
+  command = [
+    "meownix-browser", "youtube", "https://www.youtube.com/tv",
+    # Pretend to be a Samsung TV so YouTube serves its TV interface.
+    "Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.5) AppleWebKit/537.36 (KHTML, like Gecko) 85.0.4183.93/6.5 TV Safari/537.36",
+  ]
+
+[[category]]
+name = "System"
+icon = "gear"
+
+  [[category.item]]
+  name = "Network"
+  icon = "network"
+  action = "network"
+
+  [[category.item]]
+  name = "Restart"
+  icon = "restart"
+  description = "Restart the TV box"
+  action = "reboot"
+
+  [[category.item]]
+  name = "Shut down"
+  icon = "power"
+  description = "Turn the TV box off"
+  action = "poweroff"

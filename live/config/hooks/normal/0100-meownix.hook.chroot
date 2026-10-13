@@ -1,0 +1,24 @@
+#!/bin/sh
+# Runs inside the image chroot at build time.
+set -e
+
+# Locale and timezone
+sed -i 's/^# *en_GB.UTF-8/en_GB.UTF-8/' /etc/locale.gen
+locale-gen
+echo 'LANG=en_GB.UTF-8' > /etc/default/locale
+ln -sf /usr/share/zoneinfo/Europe/London /etc/localtime
+echo 'Europe/London' > /etc/timezone
+
+# The TV user. Logs in automatically on tty1 and starts the menu (see ~/.profile).
+if ! id tv >/dev/null 2>&1; then
+    useradd --create-home --shell /bin/bash --user-group \
+            --groups audio,video,render,input,netdev,sudo tv
+    # No password for now. Set one before we expose SSH or install to disk.
+    passwd -d tv
+fi
+cp -rT /etc/skel-meownix /home/tv
+chown -R tv:tv /home/tv
+rm -rf /etc/skel-meownix
+
+systemctl enable NetworkManager systemd-timesyncd
+systemctl set-default multi-user.target

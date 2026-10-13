@@ -1,0 +1,55 @@
+# Everything that goes into the image. Recommends are off, so list what we need.
+
+# Base system
+systemd-sysv
+systemd-timesyncd
+dbus-user-session
+polkitd
+ca-certificates
+locales
+tzdata
+sudo
+less
+nano
+
+# Hardware: Intel GPU, video decode, Wi-Fi/Bluetooth, sound firmware
+intel-microcode
+firmware-intel-graphics
+firmware-iwlwifi
+firmware-realtek
+firmware-sof-signed
+libgl1-mesa-dri
+mesa-va-drivers
+intel-media-va-driver-non-free
+
+# Networking
+network-manager
+
+# Audio
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+
+# Display: cage is a kiosk Wayland compositor that shows one app fullscreen
+cage
+xwayland
+fonts-inter
+fonts-dejavu-core
+fonts-noto-color-emoji
+
+# Libraries the crossbar menu (meownix-menu, Rust/egui) loads at runtime
+libegl1
+libegl-mesa0
+libwayland-client0
+libwayland-egl1
+libwayland-cursor0
+libxkbcommon0
+
+# Apps. FreeTube is not in Debian: build.sh drops its .deb into config/packages.chroot
+firefox-esr
+freetube
+webext-ublock-origin-firefox
+
+# Debugging the remote's key codes
+evtest

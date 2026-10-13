@@ -1,0 +1,30 @@
+#!/bin/sh
+# meownix-browser PROFILE URL [USER_AGENT]
+#
+# Opens URL in Firefox kiosk mode with its own profile, so each app (YouTube,
+# Flex, ...) keeps its own logins and settings and can't interfere with the others.
+set -e
+
+profile="$HOME/.local/share/meownix/firefox/$1"
+url="$2"
+ua="$3"
+
+mkdir -p "$profile"
+cat > "$profile/user.js" <<EOF
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.aboutwelcome.enabled", false);
+user_pref("browser.startup.homepage_override.mstone", "ignore");
+user_pref("browser.sessionstore.resume_from_crash", false);
+user_pref("browser.tabs.warnOnClose", false);
+user_pref("full-screen-api.warning.timeout", 0);
+user_pref("media.autoplay.default", 0);
+user_pref("media.ffmpeg.vaapi.enabled", true);
+user_pref("media.hardware-video-decoding.force-enabled", true);
+user_pref("extensions.autoDisableScopes", 0);
+user_pref("extensions.enabledScopes", 15);
+EOF
+if [ -n "$ua" ]; then
+    echo "user_pref(\"general.useragent.override\", \"$ua\");" >> "$profile/user.js"
+fi
+
+exec firefox-esr --kiosk --no-remote --profile "$profile" "$url"
