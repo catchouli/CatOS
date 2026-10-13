@@ -8,7 +8,23 @@ pub struct Config {
     #[serde(default)]
     #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub controls: Controls,
+    #[serde(default)]
+    pub display: Display,
     pub category: Vec<Category>,
+}
+
+#[derive(Deserialize)]
+#[serde(default)]
+pub struct Display {
+    /// How much to enlarge apps on a 1080p screen, so they're readable from the
+    /// couch. Adjusted for the real resolution, so they look the same size on any screen.
+    pub scale: f32,
+}
+
+impl Default for Display {
+    fn default() -> Self {
+        Self { scale: 1.75 }
+    }
 }
 
 #[derive(Deserialize)]
@@ -53,6 +69,9 @@ pub struct Item {
     /// Built-in action instead of a command: reboot, poweroff, network, quit.
     #[serde(default)]
     pub action: Option<String>,
+    /// Overrides [display] scale for this app.
+    #[serde(default)]
+    pub scale: Option<f32>,
 }
 
 pub fn load(explicit: Option<PathBuf>) -> Result<Config, String> {

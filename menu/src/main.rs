@@ -141,6 +141,7 @@ impl Menu {
     fn activate(&mut self, ctx: &egui::Context) {
         let Some(item) = self.selected() else { return };
         let (name, command, action) = (item.name.clone(), item.command.clone(), item.action.clone());
+        let scale = self.app_scale(ctx, item.scale);
         let here = (self.cat, self.items[self.cat]);
         let now = Instant::now();
         match action.as_deref() {
@@ -160,13 +161,21 @@ impl Menu {
             Some("quit") => ctx.send_viewport_cmd(ViewportCommand::Close),
             Some(_) => {}
             None => {
-                if self.runner.launch(&name, &command) {
+                if self.runner.launch(&name, &command, scale) {
                     // Stays until the app exits; by then its window has covered it anyway.
                     // Apps can take a while to appear, so this shows something is happening.
                     self.toast = Some((format!("Opening {name}"), now + Duration::from_secs(3600)));
                 }
             }
         }
+    }
+
+    /// The zoom factor for an app: the configured 1080p scale, adjusted for the
+    /// screen's real height in pixels.
+    fn app_scale(&self, ctx: &egui::Context, item_scale: Option<f32>) -> f32 {
+        let height_px = ctx.content_rect().height() * ctx.pixels_per_point();
+        let scale = item_scale.unwrap_or(self.cfg.display.scale) * height_px / 1080.0;
+        (scale * 4.0).round().max(4.0) / 4.0 // quarter steps, never below 1x
     }
 
     fn description(&mut self, item_idx: (usize, usize)) -> String {

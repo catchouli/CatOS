@@ -34,7 +34,9 @@ impl Runner {
         cur.as_ref().map(|r| (r.name.clone(), r.started))
     }
 
-    pub fn launch(&self, name: &str, command: &[String]) -> bool {
+    /// Runs `command`. `{scale}` in its arguments, and $MEOWNIX_SCALE in its
+    /// environment, give the zoom factor the app should use.
+    pub fn launch(&self, name: &str, command: &[String], scale: f32) -> bool {
         if self.running().is_some() || command.is_empty() {
             return false;
         }
@@ -44,8 +46,10 @@ impl Runner {
             c.arg("3");
             c
         } else {
+            let scale = format!("{scale:.2}");
             let mut c = Command::new(&command[0]);
-            c.args(&command[1..]);
+            c.args(command[1..].iter().map(|a| a.replace("{scale}", &scale)));
+            c.env("MEOWNIX_SCALE", &scale);
             c
         };
         // Own process group, so closing the app also closes its helpers

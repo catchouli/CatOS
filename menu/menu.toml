@@ -11,6 +11,12 @@ home_keys = ["KEY_HOMEPAGE"]
 hold_keys = ["KEY_BACK", "KEY_ESC"]
 hold_seconds = 1.0
 
+[display]
+# How much to enlarge apps on a 1080p screen, so they're readable from the
+# couch. It's adjusted for the real resolution, so apps look the same size on
+# any screen. An app can set its own `scale` to override it.
+scale = 1.75
+
 [[category]]
 name = "Watch"
 icon = "tv"
@@ -25,7 +31,7 @@ icon = "tv"
   name = "FreeTube"
   icon = "play"
   description = "YouTube without the ads or tracking"
-  command = ["freetube", "--ozone-platform-hint=auto"]
+  command = ["meownix-freetube"]
 
   [[category.item]]
   name = "YouTube"

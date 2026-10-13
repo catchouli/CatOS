@@ -1,0 +1,14 @@
+#!/bin/sh
+# Starts FreeTube zoomed to the scale the menu chose (see [display] in menu.toml).
+#
+# Electron's --force-device-scale-factor breaks window sizing under XWayland
+# (the window ends up small in a corner), so set FreeTube's own UI scale instead.
+# Its settings file is append-only JSON lines where the last entry wins.
+if [ -n "${MEOWNIX_SCALE:-}" ]; then
+    db="$HOME/.config/FreeTube/settings.db"
+    mkdir -p "$(dirname "$db")"
+    percent=$(awk -v s="$MEOWNIX_SCALE" 'BEGIN { printf "%d", s * 100 + 0.5 }')
+    echo "{\"_id\":\"uiScale\",\"value\":$percent}" >> "$db"
+fi
+
+exec freetube --ozone-platform-hint=auto "$@"

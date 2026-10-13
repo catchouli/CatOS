@@ -23,6 +23,10 @@ user_pref("media.hardware-video-decoding.force-enabled", true);
 user_pref("extensions.autoDisableScopes", 0);
 user_pref("extensions.enabledScopes", 15);
 EOF
+# Zoom chosen by the menu (see [display] in menu.toml), so pages are readable from the couch.
+if [ -n "${MEOWNIX_SCALE:-}" ]; then
+    echo "user_pref(\"layout.css.devPixelsPerPx\", \"$MEOWNIX_SCALE\");" >> "$profile/user.js"
+fi
 if [ -n "$ua" ]; then
     echo "user_pref(\"general.useragent.override\", \"$ua\");" >> "$profile/user.js"
 fi
