@@ -19,7 +19,7 @@ So meownix:
 - **Boots straight into the menu.** No login screen, no desktop, nothing to click past.
 - **Only has the apps we actually use.** [Flex](https://github.com/catchouli/flex) for
   our own library, [FreeTube](https://freetubeapp.io/) for YouTube, and YouTube's TV
-  interface in a browser for when FreeTube breaks.
+  interface in a browser (with the ads blocked) for when FreeTube breaks.
 - **Works from the couch.** Everything's usable with an air-mouse remote: arrows, OK
   and back. Apps open fullscreen and are scaled up so you can read them from across
   the room.
