@@ -1,8 +1,10 @@
 #!/bin/sh
 # meownix-browser PROFILE URL [USER_AGENT]
 #
-# Opens URL in Firefox kiosk mode with its own profile, so each app (YouTube,
-# Flex, ...) keeps its own logins and settings and can't interfere with the others.
+# Opens URL in full-screen Firefox (like pressing F11) with its own profile, so
+# each app (YouTube, Flex, ...) keeps its own logins and settings. The toolbar is
+# hidden but slides down when the mouse reaches the top of the screen; see
+# /usr/lib/firefox-esr/meownix.cfg.
 set -e
 
 profile="$HOME/.local/share/meownix/firefox/$1"
@@ -22,6 +24,8 @@ user_pref("media.ffmpeg.vaapi.enabled", true);
 user_pref("media.hardware-video-decoding.force-enabled", true);
 user_pref("extensions.autoDisableScopes", 0);
 user_pref("extensions.enabledScopes", 15);
+user_pref("meownix.fullscreen", true);
+user_pref("browser.fullscreen.autohide", true);
 EOF
 # Zoom chosen by the menu (see [display] in menu.toml), so pages are readable from the couch.
 if [ -n "${MEOWNIX_SCALE:-}" ]; then
@@ -31,4 +35,4 @@ if [ -n "$ua" ]; then
     echo "user_pref(\"general.useragent.override\", \"$ua\");" >> "$profile/user.js"
 fi
 
-exec firefox-esr --kiosk --no-remote --profile "$profile" "$url"
+exec firefox-esr --no-remote --profile "$profile" "$url"
