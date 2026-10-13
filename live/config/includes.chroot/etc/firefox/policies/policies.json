@@ -1,5 +1,21 @@
 {
   "policies": {
+    "3rdparty": {
+      "Extensions": {
+        "uBlock0@raymondhill.net": {
+          "toOverwrite": {
+            "filters": [
+              "! YouTube's TV interface (youtube.com/tv) gets its ads inside the video data,",
+              "! which uBlock's built-in YouTube rules don't cover. Strip the ad fields",
+              "! wherever the page reads them: JSON.parse, fetch and XHR responses.",
+              "www.youtube.com##+js(json-prune, playerResponse.adPlacements playerResponse.playerAds playerResponse.adSlots adPlacements playerAds adSlots)",
+              "www.youtube.com##+js(json-prune-fetch-response, playerResponse.adPlacements playerResponse.playerAds playerResponse.adSlots adPlacements playerAds adSlots)",
+              "www.youtube.com##+js(json-prune-xhr-response, playerResponse.adPlacements playerResponse.playerAds playerResponse.adSlots adPlacements playerAds adSlots)"
+            ]
+          }
+        }
+      }
+    },
     "DisableAppUpdate": true,
     "DisableTelemetry": true,
     "DisableFirefoxStudies": true,
