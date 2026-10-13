@@ -1,152 +1,81 @@
 # meownix
 
-A tiny Debian-based system that turns a mini PC into a TV box. It boots
-straight into a console-style crossbar menu (no login screen, no desktop)
-and launches the apps we actually watch things with, fullscreen:
-[Flex](#apps) for our own media library, [FreeTube](https://freetubeapp.io/),
-and YouTube's TV interface. Everything works from an air-mouse remote with
-just the arrow keys, OK and Back.
+<a href="screenshots/menu.jpg"><img src="screenshots/menu-thumb.jpg" width="24%"></a>
+<a href="screenshots/system.jpg"><img src="screenshots/system-thumb.jpg" width="24%"></a>
+<a href="screenshots/freetube.jpg"><img src="screenshots/freetube-thumb.jpg" width="24%"></a>
+<a href="screenshots/youtube.jpg"><img src="screenshots/youtube-thumb.jpg" width="24%"></a>
 
-It's built for a Minix NGC-1 driving a projector, but should run on most
-Intel-based x86_64 mini PCs.
+A tiny Linux system for the mini PC under our projector. It boots straight into a
+console-style menu, you pick what you want to watch with the remote, and it opens
+fullscreen. That's it.
 
-![The meownix menu](docs/screenshots/menu.png)
+The PC used to run Windows, which was hilariously slow on it, and every time we sat
+down to watch something there was a login screen, an update, a popup, or a window
+that needed a mouse to get rid of. I wanted something that just turns on and lets us
+watch stuff.
 
-| | |
-|---|---|
-| ![System menu showing the network address, restart and shut down](docs/screenshots/system.png) | ![YouTube's TV interface running fullscreen](docs/screenshots/youtube.png) |
-| System menu | YouTube's TV interface |
+So meownix:
 
-## Using it
+- **Boots straight into the menu.** No login screen, no desktop, nothing to click past.
+- **Only has the apps we actually use.** [Flex](https://github.com/catchouli/flex) for
+  our own library, [FreeTube](https://freetubeapp.io/) for YouTube, and YouTube's TV
+  interface in a browser for when FreeTube breaks.
+- **Works from the couch.** Everything's usable with an air-mouse remote: arrows, OK
+  and back. Apps open fullscreen and are scaled up so you can read them from across
+  the room.
+- **Always gets you back to the menu.** Hold Back (or press Home) and whatever's open
+  closes, even if it's frozen.
 
-| Remote | Does |
-|---|---|
-| ◀ ▶ | Switch category |
-| ▲ ▼ | Choose an app |
-| OK | Open it |
-| Hold **Back** (1s) or press **Home** | Close the app and return to the menu |
+It's built for a Minix NGC-1, but it should run on pretty much any Intel mini PC.
 
-Restart and Shut down ask you to press OK twice, so a stray press can't turn
-the box off. The System menu also shows the box's network address.
+## How it works
 
-## How it fits together
+It's plain Debian with almost everything taken out. When it boots it logs straight
+into a [cage](https://github.com/cage-kiosk/cage) session, a tiny compositor that
+just shows one thing fullscreen, and that runs the menu. The menu is a small Rust
+app ([egui](https://github.com/emilk/egui)) that launches each app on top of itself
+and shows up again when the app closes.
 
-```
-UEFI → GRUB → Debian live (trixie, amd64)
-  └─ getty autologin on tty1 as `tv`
-       └─ ~/.profile → meownix-session
-            └─ cage (Wayland kiosk compositor)
-                 └─ meownix-menu (Rust + egui)
-                      ├─ meownix-browser flex …     Firefox kiosk, own profile
-                      ├─ freetube
-                      └─ meownix-browser youtube …  youtube.com/tv with a TV user agent
-```
+What's in the menu lives in [`menu/menu.toml`](menu/menu.toml), so adding another
+app (or pointing Flex at your own server) is a couple of lines.
 
-- **cage** shows its newest window fullscreen. The menu launches an app, the
-  app's window covers the menu, and when it closes the menu is visible again.
-- **meownix-menu** reads input devices directly to catch the Back/Home keys,
-  so it can close whatever app is open even when it doesn't have focus.
-  Apps run in their own process group, so closing one also closes its helpers.
-- Each browser app gets its **own Firefox profile**, so logins and settings
-  don't mix. Firefox has uBlock Origin, DRM enabled, telemetry off.
-- **No Python, no desktop**: the image is Debian with recommends off, plus
-  exactly the packages in [`live/config/package-lists`](live/config/package-lists/meownix.list.chroot).
+## Getting it running
 
-### Apps
-
-Everything in the menu comes from [`menu/menu.toml`](menu/menu.toml): add a
-category or an item with a name, an icon and the command to run. Flex is our
-self-hosted media server; point its entry at your own server, or swap it for
-anything with a web interface.
-
-## Building
-
-You need Docker. Everything else runs in containers.
+You'll need Docker. Then:
 
 ```sh
-./build.sh          # out/meownix-amd64.iso: the image for the real (x86_64) box
-./build.sh arm64    # out/meownix-arm64.iso: same system for fast VMs on Apple Silicon
-./build.sh menu     # just compiles the menu
+./build.sh
 ```
 
-Both images come from the same config. The arm64 one leaves out the
-Intel-only firmware and drivers. On an Apple Silicon Mac the x86_64 image is
-built under emulation and takes 15–30 minutes; the arm64 one builds natively.
-
-### Working on the menu
-
-The menu runs as a normal window on macOS or Linux, which is much faster
-than rebuilding the image:
+That builds `out/meownix-amd64.iso`, which you can write to a USB stick and boot
+from. Check the disk number with `diskutil list` first, because this wipes it:
 
 ```sh
-cd menu
-cargo run -- --windowed --dry-run --config menu.toml
-```
-
-`--dry-run` pretends to launch apps instead of running them. Esc quits.
-
-### Trying it in a VM
-
-```sh
-brew install qemu
-vm/run.sh           # full screen, UEFI like the real box (Ctrl+Opt+F leaves full screen)
-vm/run.sh window    # in a window instead
-```
-
-On Apple Silicon this boots the arm64 image with Apple's hypervisor, which
-runs at close to native speed. `vm/run.sh amd64` boots the real x86_64
-image, but under emulation it manages about one frame a second, so it's only
-good for checking that the image boots.
-
-`vm/run.sh headless` runs without a window, and `vm/ctl.py` can take
-screenshots and press keys; that's how the screenshots above were made.
-
-### Putting it on a USB stick
-
-Check the disk number with `diskutil list` (macOS) or `lsblk` (Linux) first:
-this overwrites the whole stick.
-
-```sh
-# macOS
 diskutil unmountDisk /dev/diskN
 sudo dd if=out/meownix-amd64.iso of=/dev/rdiskN bs=4m status=progress
-
-# Linux
-sudo dd if=out/meownix-amd64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
-## Layout
+On Linux it's the same `dd`, with `/dev/sdX` from `lsblk`.
 
-| Path | What |
-|---|---|
-| [`menu/`](menu) | The crossbar menu (Rust/egui) and its `menu.toml` |
-| [`live/`](live) | live-build config: package list, build hook, files copied into the image, GRUB templates |
-| [`builder/`](builder) | Docker images for building (live-build, Rust cross-compiler) |
-| [`vm/`](vm) | Run and drive the ISO in QEMU |
-| [`build.sh`](build.sh) | Builds `out/meownix-amd64.iso` |
+To try it out in a VM first (on a Mac), `brew install vfkit`, then
+`./build.sh arm64` and `vm/run.sh`. It's the same system built for ARM, so it runs
+at full speed on Apple Silicon.
 
-## Debugging on the box
+## Remote controls
 
-Ctrl+Alt+F2 gives a console: log in as `tv`, no password (passwordless sudo
-while we're developing). Ctrl+Alt+F1 goes back to the TV.
+Left and right switch between Watch and System, up and down pick an app, OK opens it.
+Hold Back for a second, or press Home, to close the app and go back to the menu.
 
-- `evtest` shows what keys the remote sends; put their names in
-  `menu.toml` under `[controls]`.
-- The session log is `~/.local/state/meownix/session.log`.
+Restart and Shut down are under System, and you have to press OK twice so nobody
+turns it off by accident. System also shows the box's IP address.
 
 ## Credits
 
-meownix is glue around other people's excellent work:
-[Debian](https://www.debian.org/) and its
-[live-build](https://salsa.debian.org/live-team/live-build),
-[cage](https://github.com/cage-kiosk/cage),
-[egui](https://github.com/emilk/egui),
+meownix is mostly glue around other people's great work:
+[Debian](https://www.debian.org/) and
+[live-build](https://salsa.debian.org/live-team/live-build), cage, egui,
 [Firefox](https://www.mozilla.org/firefox/),
-[uBlock Origin](https://github.com/gorhill/uBlock),
-[FreeTube](https://github.com/FreeTubeApp/FreeTube) and the
-[Inter](https://rsms.me/inter/) typeface.
-
-The GRUB templates in `live/config/bootloaders/grub-pc` are adapted from
-live-build (GPL-3.0-or-later). FreeTube is downloaded at build time and is
-not part of this repository. YouTube is a trademark of Google; meownix is not
-affiliated with Google, Sony or anyone else.
+[uBlock Origin](https://github.com/gorhill/uBlock), FreeTube and the
+[Inter](https://rsms.me/inter/) font. The boot menu templates in
+`live/config/bootloaders` come from live-build (GPL-3.0-or-later). FreeTube is
+downloaded during the build and isn't part of this repo.
