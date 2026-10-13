@@ -161,7 +161,9 @@ impl Menu {
             Some(_) => {}
             None => {
                 if self.runner.launch(&name, &command) {
-                    self.toast = Some((format!("Opening {name}"), now + Duration::from_secs(6)));
+                    // Stays until the app exits; by then its window has covered it anyway.
+                    // Apps can take a while to appear, so this shows something is happening.
+                    self.toast = Some((format!("Opening {name}"), now + Duration::from_secs(3600)));
                 }
             }
         }
@@ -318,12 +320,12 @@ impl eframe::App for Menu {
         let (dt, t) = ctx.input(|i| (i.stable_dt.min(0.1), i.time));
         self.draw(ui.painter(), ctx.content_rect(), dt, t);
 
-        match running {
-            // The app is covering us: no need to animate a hidden menu.
-            Some((_, started)) if started.elapsed() > Duration::from_secs(6) => {
-                ctx.request_repaint_after(Duration::from_millis(250))
-            }
-            _ => ctx.request_repaint(),
+        if running.is_some() {
+            // An app is starting or covering us: redraw just enough to animate the
+            // "Opening…" dots, and leave the CPU to the app.
+            ctx.request_repaint_after(Duration::from_millis(250));
+        } else {
+            ctx.request_repaint();
         }
     }
 }

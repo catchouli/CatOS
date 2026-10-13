@@ -1,15 +1,22 @@
 #!/bin/sh
 # live-build configuration for meownix. `lb config` calls this automatically.
+# ARCH is amd64 (the real box) or arm64 (fast VMs on Apple Silicon).
 set -e
+
+arch="${ARCH:-amd64}"
+case "$arch" in
+    amd64) bootloaders="grub-efi,syslinux" ;;
+    arm64) bootloaders="grub-efi" ;;
+esac
 
 lb config noauto \
   --mode debian \
   --distribution trixie \
-  --architecture amd64 \
+  --architecture "$arch" \
   --archive-areas "main contrib non-free non-free-firmware" \
   --apt-recommends false \
   --binary-images iso-hybrid \
-  --bootloaders "grub-efi,syslinux" \
+  --bootloaders "$bootloaders" \
   --debian-installer none \
   --firmware-binary false \
   --firmware-chroot false \

@@ -12,15 +12,20 @@ sudo
 less
 nano
 
-# Hardware: Intel GPU, video decode, Wi-Fi/Bluetooth, sound firmware
+# Graphics and video decode
+libgl1-mesa-dri
+mesa-va-drivers
+
+# The real box (Intel): microcode, GPU/video decode, Wi-Fi, sound firmware.
+# The arm64 build is only for VMs, so it skips these.
+#if ARCHITECTURES amd64
 intel-microcode
+intel-media-va-driver-non-free
 firmware-intel-graphics
 firmware-iwlwifi
 firmware-realtek
 firmware-sof-signed
-libgl1-mesa-dri
-mesa-va-drivers
-intel-media-va-driver-non-free
+#endif
 
 # Networking
 network-manager

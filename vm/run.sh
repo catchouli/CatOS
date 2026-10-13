@@ -1,34 +1,68 @@
 #!/bin/sh
-# Boots out/meownix-amd64.iso in QEMU, the way the NGC-1 will: UEFI, x86_64.
+# Boots a meownix ISO in a VM with UEFI, like the real box.
 #
-#   vm/run.sh             in a window (click into it; Ctrl+Opt+G releases the mouse)
-#   vm/run.sh headless    no window; control it with vm/ctl.py
+#   vm/run.sh [arm64|amd64] [window|headless]
 #
-# x86 is emulated on Apple Silicon, so it's slow. Fine for checking that things
-# boot and launch, not for judging video playback.
+#   arm64      out/meownix-arm64.iso with Apple's Virtualization framework (via vfkit):
+#              near-native speed on Apple Silicon. The default on an ARM Mac; use it
+#              for testing. Always opens a window; quit vfkit to stop it.
+#   amd64      out/meownix-amd64.iso, the image for the real box. x86 is emulated
+#              on an ARM Mac, so it's very slow: only for checking that it boots.
+#
+#   (default)  full screen, scaled to fit (Ctrl+Opt+F leaves full screen,
+#              Ctrl+Opt+G releases the mouse)
+#   window     in a resizable window
+#   headless   no window; control it with vm/ctl.py
 set -eu
 cd "$(dirname "$0")/.."
 
-iso=out/meownix-amd64.iso
+arch=amd64
+[ "$(uname -m)" = arm64 ] && arch=arm64
+case "${1:-}" in amd64|arm64) arch=$1; shift ;; esac
+
+iso="out/meownix-$arch.iso"
+[ -f "$iso" ] || { echo "No $iso yet: run ./build.sh $arch"; exit 1; }
 share="$(brew --prefix qemu)/share/qemu"
 state=out/vm
 mkdir -p "$state"
-[ -f "$state/efi-vars.fd" ] || cp "$share/edk2-i386-vars.fd" "$state/efi-vars.fd"
 
-if [ "${1:-}" = headless ]; then
-    display="-display none -vnc 127.0.0.1:1"
-else
-    display="-display cocoa"
-fi
+# zoom-to-fit scales the guest screen to the window, so it isn't tiny on Retina screens.
+case "${1:-}" in
+    headless) display="-display none -vnc 127.0.0.1:1" ;;
+    window)   display="-display cocoa,zoom-to-fit=on" ;;
+    *)        display="-display cocoa,zoom-to-fit=on,full-screen=on" ;;
+esac
+
+common="-smp 4 -m 4G
+    -device qemu-xhci -device usb-kbd -device usb-tablet
+    -nic user,model=virtio-net-pci,ipv6=off
+    -qmp unix:$state/qmp.sock,server,nowait"
 
 # shellcheck disable=SC2086
-exec qemu-system-x86_64 \
-    -machine q35 -accel tcg,thread=multi -cpu max -smp 4 -m 4G \
-    -drive if=pflash,format=raw,readonly=on,file="$share/edk2-x86_64-code.fd" \
-    -drive if=pflash,format=raw,file="$state/efi-vars.fd" \
-    -cdrom "$iso" -boot d \
-    -device virtio-vga \
-    -device qemu-xhci -device usb-kbd -device usb-tablet \
-    -nic user,model=virtio-net-pci,ipv6=off \
-    -qmp unix:"$state/qmp.sock",server,nowait \
-    $display
+case $arch in
+    arm64)
+        # Homebrew's QEMU can't use Apple's hypervisor on macOS 14 (it needs the
+        # macOS 15 SDK), so this uses Apple's Virtualization framework directly.
+        command -v vfkit >/dev/null || { echo "Needs vfkit: brew install vfkit"; exit 1; }
+        exec vfkit --cpus 4 --memory 4096 \
+            --bootloader efi,variable-store="$state/efi-vars-vfkit",create \
+            --device usb-mass-storage,path="$iso",readonly \
+            --device virtio-net,nat \
+            --device virtio-gpu,width=1920,height=1080 \
+            --device virtio-input,keyboard \
+            --device virtio-input,pointing \
+            --device virtio-rng \
+            --gui
+        ;;
+    amd64)
+        vars="$state/efi-vars.fd"
+        [ -f "$vars" ] || cp "$share/edk2-i386-vars.fd" "$vars"
+        exec qemu-system-x86_64 \
+            -machine q35 -accel tcg,thread=multi -cpu max $common \
+            -drive if=pflash,format=raw,readonly=on,file="$share/edk2-x86_64-code.fd" \
+            -drive if=pflash,format=raw,file="$vars" \
+            -cdrom "$iso" -boot d \
+            -device virtio-vga,xres=1280,yres=720 \
+            $display
+        ;;
+esac

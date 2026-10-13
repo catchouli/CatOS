@@ -64,13 +64,14 @@ anything with a web interface.
 You need Docker. Everything else runs in containers.
 
 ```sh
-./build.sh          # builds out/meownix-amd64.iso
-./build.sh menu     # just cross-compiles the menu
+./build.sh          # out/meownix-amd64.iso: the image for the real (x86_64) box
+./build.sh arm64    # out/meownix-arm64.iso: same system for fast VMs on Apple Silicon
+./build.sh menu     # just compiles the menu
 ```
 
-On an Apple Silicon Mac the image is built under x86 emulation, so a full
-build takes 15–30 minutes. The menu is cross-compiled natively and takes
-about a minute.
+Both images come from the same config. The arm64 one leaves out the
+Intel-only firmware and drivers. On an Apple Silicon Mac the x86_64 image is
+built under emulation and takes 15–30 minutes; the arm64 one builds natively.
 
 ### Working on the menu
 
@@ -87,13 +88,18 @@ cargo run -- --windowed --dry-run --config menu.toml
 ### Trying it in a VM
 
 ```sh
-brew install qemu   # or your distro's qemu-system-x86
-vm/run.sh           # boots the ISO in a window (UEFI, like the real box)
+brew install qemu
+vm/run.sh           # full screen, UEFI like the real box (Ctrl+Opt+F leaves full screen)
+vm/run.sh window    # in a window instead
 ```
 
-`vm/run.sh headless` runs it without a window, and `vm/ctl.py` can take
-screenshots and press keys, which is how the screenshots above were made.
-x86 is emulated on Apple Silicon, so expect it to be slow.
+On Apple Silicon this boots the arm64 image with Apple's hypervisor, which
+runs at close to native speed. `vm/run.sh amd64` boots the real x86_64
+image, but under emulation it manages about one frame a second, so it's only
+good for checking that the image boots.
+
+`vm/run.sh headless` runs without a window, and `vm/ctl.py` can take
+screenshots and press keys; that's how the screenshots above were made.
 
 ### Putting it on a USB stick
 
