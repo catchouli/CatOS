@@ -29,6 +29,6 @@ exec qemu-system-x86_64 \
     -cdrom "$iso" -boot d \
     -device virtio-vga \
     -device qemu-xhci -device usb-kbd -device usb-tablet \
-    -nic user,model=virtio-net-pci \
+    -nic user,model=virtio-net-pci,ipv6=off \
     -qmp unix:"$state/qmp.sock",server,nowait \
     $display

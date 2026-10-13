@@ -68,7 +68,9 @@ def main():
             time.sleep(0.3)
     elif action == "type":
         for ch in " ".join(args) + "\n":
-            cmd("send-key", keys=[{"type": "qcode", "data": k} for k in qcodes(ch)])
+            # Short hold: the emulated guest is slow enough to auto-repeat otherwise.
+            cmd("send-key", keys=[{"type": "qcode", "data": k} for k in qcodes(ch)], **{"hold-time": 50})
+            time.sleep(0.05)
     elif action == "hold":
         key = {"type": "key", "data": {"down": True, "key": {"type": "qcode", "data": args[0]}}}
         cmd("input-send-event", events=[key])

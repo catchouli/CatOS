@@ -13,6 +13,8 @@ if systemd-detect-virt -q; then
     export WLR_NO_HARDWARE_CURSORS=1
     export WLR_RENDERER=pixman
     unset LIBVA_DRIVER_NAME
+    # Firefox's native Wayland mode draws nothing on a GPU-less VM; go via XWayland.
+    export MOZ_ENABLE_WAYLAND=0
 fi
 
 mkdir -p "$HOME/.local/state/meownix"
