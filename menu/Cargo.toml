@@ -3,6 +3,7 @@ name = "meownix-menu"
 version = "0.1.0"
 edition = "2024"
 description = "Crossbar launcher for the meownix TV box"
+license = "MIT"
 
 [dependencies]
 eframe = { version = "0.36", default-features = false, features = ["glow", "wayland", "x11", "default_fonts"] }

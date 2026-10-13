@@ -79,3 +79,8 @@ meownix is mostly glue around other people's great work:
 [Inter](https://rsms.me/inter/) font. The boot menu templates in
 `live/config/bootloaders` come from live-build (GPL-3.0-or-later). FreeTube is
 downloaded during the build and isn't part of this repo.
+
+## License
+
+MIT, see [LICENSE](LICENSE), apart from those boot menu templates, which stay
+GPL-3.0-or-later.
