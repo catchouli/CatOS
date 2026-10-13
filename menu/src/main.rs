@@ -31,6 +31,11 @@ use runner::Runner;
 const BG_TOP: Color32 = Color32::from_rgb(14, 18, 40);
 const BG_BOTTOM: Color32 = Color32::from_rgb(46, 22, 64);
 
+/// The menu fades to black before an app opens, and back in when it closes.
+/// (cage can't blend windows, so the app itself appears as a cut from black.)
+const FADE_OUT: Duration = Duration::from_millis(350);
+const FADE_IN: Duration = Duration::from_millis(500);
+
 /// Inter if it's installed (Debian's fonts-inter), otherwise egui's built-in font.
 const FONT_CANDIDATES: &[&str] = &[
     "/usr/share/fonts/opentype/inter/InterVariable.ttf",
@@ -70,6 +75,14 @@ fn local_ip() -> Option<String> {
     Some(s.local_addr().ok()?.ip().to_string())
 }
 
+/// An app waiting for the fade-out to finish before it starts.
+struct Launch {
+    name: String,
+    command: Vec<String>,
+    scale: f32,
+    since: Instant,
+}
+
 struct Menu {
     cfg: Config,
     runner: Runner,
@@ -84,7 +97,10 @@ struct Menu {
     confirm: Option<((usize, usize), Instant)>,
     ip: Option<String>,
     ip_checked: Option<Instant>,
-    was_running: bool,
+    launching: Option<Launch>,
+    /// The app that's opening or open, while the menu sits behind it in black.
+    opening: Option<String>,
+    fade_in_from: Option<Instant>,
 }
 
 impl Menu {
@@ -103,7 +119,9 @@ impl Menu {
             confirm: None,
             ip: None,
             ip_checked: None,
-            was_running: false,
+            launching: None,
+            opening: None,
+            fade_in_from: None,
         }
     }
 
@@ -160,14 +178,28 @@ impl Menu {
             }
             Some("quit") => ctx.send_viewport_cmd(ViewportCommand::Close),
             Some(_) => {}
-            None => {
-                if self.runner.launch(&name, &command, scale) {
-                    // Stays until the app exits; by then its window has covered it anyway.
-                    // Apps can take a while to appear, so this shows something is happening.
-                    self.toast = Some((format!("Opening {name}"), now + Duration::from_secs(3600)));
-                }
+            None if !command.is_empty() => {
+                // Fade out first; ui() starts the app when the fade is done.
+                self.launching = Some(Launch { name, command, scale, since: now });
             }
+            None => {}
         }
+    }
+
+    /// How black the screen is, 0 to 1: fading out to open an app, black while
+    /// it's open, fading back in after it closes.
+    fn veil(&self) -> f32 {
+        let progress = |since: Instant, over: Duration| (since.elapsed().as_secs_f32() / over.as_secs_f32()).min(1.0);
+        let v = if let Some(l) = &self.launching {
+            progress(l.since, FADE_OUT)
+        } else if self.opening.is_some() {
+            1.0
+        } else if let Some(t) = self.fade_in_from {
+            1.0 - progress(t, FADE_IN)
+        } else {
+            0.0
+        };
+        v * v * (3.0 - 2.0 * v) // smoothstep
     }
 
     /// The zoom factor for an app: the configured 1080p scale, adjusted for the
@@ -193,7 +225,7 @@ impl Menu {
         item.description.clone()
     }
 
-    fn draw(&mut self, p: &Painter, screen: Rect, dt: f32, t: f64) {
+    fn draw(&mut self, p: &Painter, screen: Rect, dt: f32, t: f64, veil: f32) {
         let (w, h) = (screen.width(), screen.height());
         let s = h / 1080.0;
         let px = |size: f32| FontId::proportional(size * s);
@@ -283,7 +315,7 @@ impl Menu {
         p.text(pos2(right, screen.top() + 44.0 * s), Align2::RIGHT_TOP, strftime("%H:%M"), px(46.0), white(255));
         p.text(pos2(right, screen.top() + 102.0 * s), Align2::RIGHT_TOP, strftime("%a %-d %b"), px(22.0), white(160));
 
-        // "Opening Flex..." while an app starts
+        // "Restart..." after a power action
         if let Some((msg, until)) = &self.toast {
             if Instant::now() > *until {
                 self.toast = None;
@@ -306,20 +338,46 @@ impl Menu {
             px(20.0),
             white(90),
         );
+
+        // Fade to black, with "Opening Flex..." in the middle while the app starts.
+        if veil > 0.0 {
+            let a = (veil * 255.0) as u8;
+            p.rect_filled(screen, 0.0, Color32::from_black_alpha(a));
+            if let Some(name) = self.launching.as_ref().map(|l| &l.name).or(self.opening.as_ref()) {
+                let text = format!("Opening {name}");
+                // Position from the width with all three dots, so the text doesn't shift.
+                let full = p.layout_no_wrap(format!("{text}..."), px(34.0), white(a)).size().x;
+                let dots = ".".repeat((t * 3.0) as usize % 4);
+                p.text(
+                    pos2(screen.center().x - full / 2.0, screen.center().y),
+                    Align2::LEFT_CENTER,
+                    format!("{text}{dots}"),
+                    px(34.0),
+                    white(a),
+                );
+            }
+        }
     }
 }
 
 impl eframe::App for Menu {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        let running = self.runner.running();
-        if running.is_some() != self.was_running {
-            self.was_running = running.is_some();
-            if running.is_none() {
-                self.toast = None;
+
+        // Start the app once the menu has faded out.
+        if self.launching.as_ref().is_some_and(|l| l.since.elapsed() >= FADE_OUT) {
+            let l = self.launching.take().unwrap();
+            if self.runner.launch(&l.name, &l.command, l.scale) {
+                self.opening = Some(l.name);
+            } else {
+                self.fade_in_from = Some(Instant::now());
             }
         }
-        if running.is_none() {
+        let running = self.runner.running();
+        if running.is_none() && self.opening.take().is_some() {
+            self.fade_in_from = Some(Instant::now()); // the app closed: fade back in
+        }
+        if running.is_none() && self.launching.is_none() {
             self.handle_keys(&ctx);
         }
         if !self.windowed {
@@ -327,7 +385,8 @@ impl eframe::App for Menu {
         }
 
         let (dt, t) = ctx.input(|i| (i.stable_dt.min(0.1), i.time));
-        self.draw(ui.painter(), ctx.content_rect(), dt, t);
+        let veil = self.veil();
+        self.draw(ui.painter(), ctx.content_rect(), dt, t, veil);
 
         if running.is_some() {
             // An app is starting or covering us: redraw just enough to animate the
