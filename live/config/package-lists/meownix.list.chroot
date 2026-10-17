@@ -25,6 +25,8 @@ firmware-intel-graphics
 firmware-iwlwifi
 firmware-realtek
 firmware-sof-signed
+# NVIDIA GPU firmware for nouveau, so it also runs properly on a desktop PC.
+firmware-nvidia-graphics
 #endif
 
 # Networking
