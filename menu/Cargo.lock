@@ -1161,9 +1161,11 @@ dependencies = [
 name = "meownix-menu"
 version = "0.1.0"
 dependencies = [
+ "cc",
  "eframe",
  "evdev",
  "libc",
+ "png",
  "serde",
  "toml",
 ]

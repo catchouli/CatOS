@@ -10,6 +10,8 @@ pub struct Config {
     pub controls: Controls,
     #[serde(default)]
     pub display: Display,
+    #[serde(default)]
+    pub avatar: Avatar,
     pub category: Vec<Category>,
 }
 
@@ -25,6 +27,13 @@ impl Default for Display {
     fn default() -> Self {
         Self { scale: 1.75 }
     }
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub struct Avatar {
+    /// A Live2D model's .model3.json, to show beside the menu. None for no avatar.
+    pub model: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]

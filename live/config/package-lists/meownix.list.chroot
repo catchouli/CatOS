@@ -47,6 +47,8 @@ fonts-noto-color-emoji
 
 # Libraries the crossbar menu (meownix-menu, Rust/egui) loads at runtime
 libegl1
+# OpenGL without GLX, for the Live2D avatar
+libopengl0
 libegl-mesa0
 libwayland-client0
 libwayland-egl1

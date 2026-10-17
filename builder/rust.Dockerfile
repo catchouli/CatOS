@@ -5,6 +5,8 @@ FROM rust:1-trixie
 RUN dpkg --add-architecture amd64 \
  && apt-get update \
  && apt-get install -y --no-install-recommends gcc-x86-64-linux-gnu libc6-dev-amd64-cross \
+    # For the Live2D avatar bridge (C++ and OpenGL), when the SDK is present.
+    g++-x86-64-linux-gnu mesa-common-dev libopengl-dev libopengl-dev:amd64 \
  && rm -rf /var/lib/apt/lists/* \
  && rustup target add x86_64-unknown-linux-gnu
 

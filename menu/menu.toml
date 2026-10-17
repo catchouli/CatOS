@@ -17,6 +17,12 @@ hold_seconds = 1.0
 # any screen. An app can set its own `scale` to override it.
 scale = 1.75
 
+[avatar]
+# A Live2D model to show beside the menu: its .model3.json, or a folder with
+# one in it. build.sh puts cache/avatar/ here. Needs a build with Live2D's SDK
+# (see build.sh); otherwise, or if there's no model, there's no avatar.
+model = "/usr/share/meownix/avatar"
+
 [[category]]
 name = "Watch"
 icon = "tv"

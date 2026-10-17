@@ -1,9 +1,10 @@
 # meownix
 
-<a href="screenshots/menu.jpg"><img src="screenshots/menu-thumb.jpg" width="24%"></a>
-<a href="screenshots/system.jpg"><img src="screenshots/system-thumb.jpg" width="24%"></a>
-<a href="screenshots/freetube.jpg"><img src="screenshots/freetube-thumb.jpg" width="24%"></a>
-<a href="screenshots/youtube.jpg"><img src="screenshots/youtube-thumb.jpg" width="24%"></a>
+<a href="screenshots/avatar.jpg"><img src="screenshots/avatar-thumb.jpg" width="19%"></a>
+<a href="screenshots/menu.jpg"><img src="screenshots/menu-thumb.jpg" width="19%"></a>
+<a href="screenshots/system.jpg"><img src="screenshots/system-thumb.jpg" width="19%"></a>
+<a href="screenshots/freetube.jpg"><img src="screenshots/freetube-thumb.jpg" width="19%"></a>
+<a href="screenshots/youtube.jpg"><img src="screenshots/youtube-thumb.jpg" width="19%"></a>
 
 A tiny Linux system for the mini PC under our projector. It boots straight into a
 console-style menu, you pick what you want to watch with the remote, and it opens
@@ -25,6 +26,8 @@ So meownix:
   the room.
 - **Always gets you back to the menu.** Hold Back (or press Home) and whatever's open
   closes, even if it's frozen.
+- **Has Pachi in it.** Optionally, a [Live2D](https://www.live2d.com/) avatar stands
+  next to the menu and watches what you're doing.
 
 It's built for a Minix NGC-1, but it should run on pretty much any Intel mini PC.
 
@@ -69,6 +72,25 @@ Hold Back for a second, or press Home, to close the app and go back to the menu.
 Restart and Shut down are under System, and you have to press OK twice so nobody
 turns it off by accident. System also shows the box's IP address.
 
+The cursor only shows up while you're moving the air-mouse, and hides again a few
+seconds after you stop.
+
+## The avatar
+
+Pachi is our Live2D model. She stands at the side of the menu, breathes and blinks,
+and looks at whatever's selected, or at the cursor while you're moving it.
+
+She isn't in this repo, and neither is the Live2D runtime that draws her (Live2D's
+licence doesn't allow it), so the avatar is off unless you add both yourself:
+
+1. Download the [Cubism SDK for Native](https://www.live2d.com/en/sdk/download/native/)
+   and unzip it into `cache/`, so you have `cache/CubismSdkForNative-*/`.
+2. Put a Live2D model (its `.model3.json` and the files next to it) in `cache/avatar/`.
+3. Run `./build.sh` again.
+
+The menu draws the model with Live2D's own framework, through a small C++ bridge in
+[`menu/avatar`](menu/avatar).
+
 ## Credits
 
 meownix is mostly glue around other people's great work:
@@ -76,7 +98,8 @@ meownix is mostly glue around other people's great work:
 [live-build](https://salsa.debian.org/live-team/live-build), cage, egui,
 [Firefox](https://www.mozilla.org/firefox/),
 [uBlock Origin](https://github.com/gorhill/uBlock), FreeTube and the
-[Inter](https://rsms.me/inter/) font. The boot menu templates in
+[Inter](https://rsms.me/inter/) font, plus Live2D's
+[Cubism SDK](https://www.live2d.com/en/sdk/about/) for the avatar. The boot menu templates in
 `live/config/bootloaders` come from live-build (GPL-3.0-or-later). FreeTube is
 downloaded during the build and isn't part of this repo.
 

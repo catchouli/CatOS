@@ -5,6 +5,11 @@
 #   ./build.sh arm64           ARM image, for fast VMs on Apple Silicon
 #   ./build.sh [arch] menu     just compile the menu
 #
+# Optional extras, from cache/ (not in the repo):
+#   cache/CubismSdkForNative-*/   Live2D's Cubism SDK for Native, unzipped
+#   cache/avatar/                 a Live2D model (its .model3.json and files)
+# With both, the menu shows the avatar; see [avatar] in menu/menu.toml.
+#
 # Everything runs in Docker. live-build works inside a Docker volume rather than
 # this folder, because a debootstrap chroot needs a real Linux filesystem.
 set -eu
@@ -22,12 +27,22 @@ FREETUBE_URL="https://github.com/FreeTubeApp/FreeTube/releases/download/v${FREET
 
 mkdir -p out cache
 
-echo "==> Building the menu (Rust, $rust_target)"
+# Live2D's SDK, if it's been downloaded (newest first).
+cubism_sdk=$(ls -d cache/CubismSdkForNative-*/ 2>/dev/null | sort -V | tail -1)
+if [ -n "$cubism_sdk" ]; then
+    sdk_args="-v $PWD/$cubism_sdk:/sdk:ro -e MEOWNIX_CUBISM_SDK=/sdk"
+    echo "==> Building the menu (Rust, $rust_target, with Live2D from $cubism_sdk)"
+else
+    sdk_args=
+    echo "==> Building the menu (Rust, $rust_target)"
+fi
 docker build -q -t meownix-rust -f builder/rust.Dockerfile builder >/dev/null
+# shellcheck disable=SC2086 # sdk_args is a list of arguments
 docker run --rm \
     -v "$PWD/menu:/src" \
     -v meownix-cargo:/usr/local/cargo/registry \
     -e CARGO_TARGET_DIR=/src/target/linux \
+    $sdk_args \
     meownix-rust \
     cargo build --release --target "$rust_target"
 cp "menu/target/linux/$rust_target/release/meownix-menu" "out/meownix-menu-$arch"
@@ -58,6 +73,18 @@ docker run --rm --privileged --platform "linux/$arch" \
         install -Dm644 /src/menu.toml           $inc/etc/meownix/menu.toml
         mkdir -p config/packages.chroot
         cp /cache/freetube_*_$ARCH.deb config/packages.chroot/
+
+        # The Live2D avatar, if there is one: the model, and the shaders
+        # the Live2D renderer loads at run time.
+        if [ -d /cache/avatar ]; then
+            mkdir -p $inc/usr/share/meownix
+            cp -r /cache/avatar $inc/usr/share/meownix/avatar
+        fi
+        shaders=$(ls -d /cache/CubismSdkForNative-*/Framework/src/Rendering/OpenGL/Shaders/StandardES 2>/dev/null | sort -V | tail -1)
+        if [ -n "$shaders" ]; then
+            mkdir -p $inc/usr/share/meownix
+            cp -r "$shaders" $inc/usr/share/meownix/live2d-shaders
+        fi
 
         lb config
         lb build 2>&1 | tee /out/build-$ARCH.log | grep --line-buffered -E "^(P:|E:|W:)" || true

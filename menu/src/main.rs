@@ -10,6 +10,7 @@
 //! For development on a normal desktop:
 //!     cargo run -- --windowed --dry-run --config menu.toml
 
+mod avatar;
 mod config;
 mod icons;
 #[cfg(target_os = "linux")]
@@ -25,6 +26,7 @@ use eframe::egui::{
     Painter, Pos2, Rect, Shape, Stroke, ViewportCommand, pos2,
 };
 
+use avatar::Avatar;
 use config::{Config, Item};
 use runner::Runner;
 
@@ -35,6 +37,9 @@ const BG_BOTTOM: Color32 = Color32::from_rgb(46, 22, 64);
 /// (cage can't blend windows, so the app itself appears as a cut from black.)
 const FADE_OUT: Duration = Duration::from_millis(350);
 const FADE_IN: Duration = Duration::from_millis(500);
+
+/// The cursor shows while the air-mouse is moving, and hides again after this.
+const CURSOR_HIDE_AFTER: Duration = Duration::from_secs(3);
 
 /// Inter if it's installed (Debian's fonts-inter), otherwise egui's built-in font.
 const FONT_CANDIDATES: &[&str] = &[
@@ -101,11 +106,14 @@ struct Menu {
     /// The app that's opening or open, while the menu sits behind it in black.
     opening: Option<String>,
     fade_in_from: Option<Instant>,
+    avatar: Option<Avatar>,
+    mouse_moved: Option<Instant>,
 }
 
 impl Menu {
     fn new(cfg: Config, runner: Runner, dry_run: bool, windowed: bool) -> Self {
         let n = cfg.category.len();
+        let avatar = cfg.avatar.model.as_deref().and_then(Avatar::load);
         Self {
             cfg,
             runner,
@@ -122,6 +130,8 @@ impl Menu {
             launching: None,
             opening: None,
             fade_in_from: None,
+            avatar,
+            mouse_moved: None,
         }
     }
 
@@ -225,7 +235,8 @@ impl Menu {
         item.description.clone()
     }
 
-    fn draw(&mut self, p: &Painter, screen: Rect, dt: f32, t: f64, veil: f32) {
+    /// `mouse` is where the cursor is, while the air-mouse is in use.
+    fn draw(&mut self, p: &Painter, screen: Rect, dt: f32, t: f64, veil: f32, mouse: Option<Pos2>) {
         let (w, h) = (screen.width(), screen.height());
         let s = h / 1080.0;
         let px = |size: f32| FontId::proportional(size * s);
@@ -270,6 +281,15 @@ impl Menu {
         let focus_x = screen.left() + w * 0.26;
         let row_y = screen.top() + h * 0.30;
         let spacing = 220.0 * s;
+
+        // The avatar watches the cursor, or else the selected item. Behind the
+        // menu's text, and not drawn at all while an app covers the menu.
+        if let Some(avatar) = &self.avatar {
+            avatar.update(dt, screen, mouse.unwrap_or(pos2(focus_x + 200.0 * s, row_y + 150.0 * s)));
+            if veil < 1.0 {
+                avatar.paint(p, screen);
+            }
+        }
 
         // Category row
         for (i, cat) in self.cfg.category.iter().enumerate() {
@@ -331,9 +351,10 @@ impl Menu {
             }
         }
 
+        // Bottom left, under the menu: the avatar stands at the right.
         p.text(
-            pos2(right, screen.bottom() - 40.0 * s),
-            Align2::RIGHT_BOTTOM,
+            pos2(focus_x - 52.0 * s, screen.bottom() - 40.0 * s),
+            Align2::LEFT_BOTTOM,
             "OK to open  ·  hold Back or press Home to return here",
             px(20.0),
             white(90),
@@ -380,13 +401,18 @@ impl eframe::App for Menu {
         if running.is_none() && self.launching.is_none() {
             self.handle_keys(&ctx);
         }
-        if !self.windowed {
+        if ctx.input(|i| i.pointer.delta() != egui::Vec2::ZERO) {
+            self.mouse_moved = Some(Instant::now());
+        }
+        let mouse_active = self.mouse_moved.is_some_and(|t| t.elapsed() < CURSOR_HIDE_AFTER);
+        if !self.windowed && !mouse_active {
             ctx.set_cursor_icon(CursorIcon::None);
         }
+        let mouse = if mouse_active { ctx.input(|i| i.pointer.latest_pos()) } else { None };
 
         let (dt, t) = ctx.input(|i| (i.stable_dt.min(0.1), i.time));
         let veil = self.veil();
-        self.draw(ui.painter(), ctx.content_rect(), dt, t, veil);
+        self.draw(ui.painter(), ctx.content_rect(), dt, t, veil, mouse);
 
         if running.is_some() {
             // An app is starting or covering us: redraw just enough to animate the
