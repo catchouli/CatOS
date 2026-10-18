@@ -19,7 +19,7 @@ So meownix:
 
 - **Boots straight into the menu.** No login screen, no desktop, nothing to click past.
 - **Only has the apps we actually use.** [Flex](https://github.com/catchouli/flex) for
-  our own library, [FreeTube](https://freetubeapp.io/) for YouTube, and YouTube's TV
+  our own library (running right on the box, playing from our network shares), [FreeTube](https://freetubeapp.io/) for YouTube, and YouTube's TV
   interface in a browser (with the ads blocked) for when FreeTube breaks.
 - **Works from the couch.** Everything's usable with an air-mouse remote: arrows, OK
   and back. Apps open fullscreen and are scaled up so you can read them from across
@@ -84,7 +84,9 @@ OK opens it.
 Hold Back for a second, or press Home, to close the app and go back to the menu.
 
 Settings → Sound picks where the sound goes: the TV over HDMI, a USB sound card,
-and so on. Restart and Shut down are under System, and you have to press OK twice
+and so on. Settings → Wi-Fi lists the networks nearby; pick one and type its
+password with the on-screen keyboard (arrows and OK), and it connects by itself
+from then on. Restart and Shut down are under System, and you have to press OK twice
 so nobody turns it off by accident. System also shows the box's IP address.
 
 The cursor only shows up while you're moving the air-mouse, and hides again a few

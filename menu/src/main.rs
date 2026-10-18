@@ -14,9 +14,12 @@ mod audio;
 mod avatar;
 mod config;
 mod icons;
+mod keyboard;
 #[cfg(target_os = "linux")]
 mod remote;
 mod runner;
+mod widgets;
+mod wifi;
 
 use std::ffi::{CStr, CString};
 use std::path::PathBuf;
@@ -81,10 +84,10 @@ fn local_ip() -> Option<String> {
     Some(s.local_addr().ok()?.ip().to_string())
 }
 
-/// The list of sound outputs, open under the Sound item.
-struct Picker {
-    outputs: Vec<audio::Output>,
-    sel: usize,
+/// What's open under a Settings item.
+enum Overlay {
+    Sound { outputs: Vec<audio::Output>, sel: usize },
+    Wifi(wifi::Menu),
 }
 
 /// An app waiting for the fade-out to finish before it starts.
@@ -111,8 +114,9 @@ struct Menu {
     ip_checked: Option<Instant>,
     /// The sound output, for the Sound item's description, and when it was looked up.
     sound: Option<(Option<String>, Instant)>,
-    /// The list of sound outputs, while it's open under the Sound item.
-    picker: Option<Picker>,
+    /// The Wi-Fi status, for the Wi-Fi item's description, and when it was looked up.
+    wifi: Option<(String, Instant)>,
+    overlay: Option<Overlay>,
     launching: Option<Launch>,
     /// The app that's opening or open, while the menu sits behind it in black.
     opening: Option<String>,
@@ -139,7 +143,8 @@ impl Menu {
             ip: None,
             ip_checked: None,
             sound: None,
-            picker: None,
+            wifi: None,
+            overlay: None,
             launching: None,
             opening: None,
             fade_in_from: None,
@@ -154,23 +159,33 @@ impl Menu {
 
     fn handle_keys(&mut self, ctx: &egui::Context) {
         let pressed = |k| ctx.input(|i| i.key_pressed(k));
-        if let Some(picker) = &mut self.picker {
-            if pressed(Key::ArrowUp) && picker.sel > 0 {
-                picker.sel -= 1;
-            }
-            if pressed(Key::ArrowDown) && picker.sel + 1 < picker.outputs.len() {
-                picker.sel += 1;
-            }
-            if pressed(Key::Enter) || pressed(Key::Space) {
-                if let Some(output) = picker.outputs.get(picker.sel) {
-                    audio::select(output);
+        match &mut self.overlay {
+            Some(Overlay::Sound { outputs, sel }) => {
+                if pressed(Key::ArrowUp) && *sel > 0 {
+                    *sel -= 1;
                 }
-                self.picker = None;
-                self.sound = None; // look it up again
-            } else if [Key::Escape, Key::BrowserBack, Key::Backspace, Key::ArrowLeft].into_iter().any(pressed) {
-                self.picker = None;
+                if pressed(Key::ArrowDown) && *sel + 1 < outputs.len() {
+                    *sel += 1;
+                }
+                if pressed(Key::Enter) || pressed(Key::Space) {
+                    if let Some(output) = outputs.get(*sel) {
+                        audio::select(output);
+                    }
+                    self.overlay = None;
+                    self.sound = None; // look it up again
+                } else if [Key::Escape, Key::BrowserBack, Key::Backspace, Key::ArrowLeft].into_iter().any(pressed) {
+                    self.overlay = None;
+                }
+                return;
             }
-            return;
+            Some(Overlay::Wifi(menu)) => {
+                if !menu.update(ctx) {
+                    self.overlay = None;
+                    self.wifi = None; // look it up again
+                }
+                return;
+            }
+            None => {}
         }
         let n_items = self.cfg.category[self.cat].item.len();
         let before = (self.cat, self.items[self.cat]);
@@ -221,8 +236,9 @@ impl Menu {
             Some("sound") => {
                 let outputs = audio::outputs();
                 let sel = outputs.iter().position(|o| o.current).unwrap_or(0);
-                self.picker = Some(Picker { outputs, sel });
+                self.overlay = Some(Overlay::Sound { outputs, sel });
             }
+            Some("wifi") => self.overlay = Some(Overlay::Wifi(wifi::Menu::open())),
             Some(_) => {}
             None if !command.is_empty() => {
                 // Fade out first; ui() starts the app when the fade is done.
@@ -267,6 +283,12 @@ impl Menu {
             }
             let current = self.sound.as_ref().and_then(|(name, _)| name.clone());
             return current.unwrap_or_else(|| "No sound output found".into());
+        }
+        if item.action.as_deref() == Some("wifi") {
+            if self.wifi.as_ref().is_none_or(|(_, t)| t.elapsed() > Duration::from_secs(3)) {
+                self.wifi = Some((wifi::status(), Instant::now()));
+            }
+            return self.wifi.as_ref().map(|(s, _)| s.clone()).unwrap_or_default();
         }
         if item.action.as_deref() == Some("network") {
             if self.ip_checked.is_none_or(|t| t.elapsed() > Duration::from_secs(3)) {
@@ -351,8 +373,8 @@ impl Menu {
         let scroll = self.item_pos[self.cat];
         for j in 0..self.cfg.category[self.cat].item.len() {
             let y = top + (j as f32 - scroll) * row_h;
-            if self.picker.is_some() && j != self.items[self.cat] {
-                continue; // the list of outputs takes their place
+            if self.overlay.is_some() && j != self.items[self.cat] {
+                continue; // the open list takes their place
             }
             if (j as f32) < scroll - 0.5 {
                 continue; // items above the selection tuck away behind the row
@@ -373,28 +395,6 @@ impl Menu {
                 }
             } else {
                 p.text(pos2(lx, y), Align2::LEFT_CENTER, &item.name, px(32.0), white(130));
-            }
-        }
-
-        // The list of sound outputs, under the Sound item.
-        if let Some(picker) = &self.picker {
-            let lx = focus_x + 70.0 * s;
-            let y0 = top + (self.items[self.cat] as f32 - scroll) * row_h + 84.0 * s;
-            if picker.outputs.is_empty() {
-                p.text(pos2(lx, y0), Align2::LEFT_CENTER, "No sound outputs found", px(28.0), white(170));
-            }
-            for (k, output) in picker.outputs.iter().enumerate() {
-                let y = y0 + k as f32 * 52.0 * s;
-                let selected = k == picker.sel;
-                if selected {
-                    let width = p.layout_no_wrap(output.name.clone(), px(28.0), white(255)).size().x;
-                    let bar = Rect::from_min_size(pos2(lx - 16.0 * s, y - 22.0 * s), egui::vec2(width + 32.0 * s, 44.0 * s));
-                    p.rect_filled(bar, 8.0 * s, white(28));
-                }
-                if output.current {
-                    p.circle_filled(pos2(lx - 34.0 * s, y), 6.0 * s, white(220));
-                }
-                p.text(pos2(lx, y), Align2::LEFT_CENTER, &output.name, px(28.0), white(if selected { 255 } else { 140 }));
             }
         }
 
@@ -427,6 +427,20 @@ impl Menu {
             px(20.0),
             white(90),
         );
+
+        // The list (or keyboard) open under a Settings item.
+        let list_at = pos2(focus_x + 70.0 * s, top + (self.items[self.cat] as f32 - scroll) * row_h + 84.0 * s);
+        match &self.overlay {
+            Some(Overlay::Sound { outputs, sel }) => {
+                let rows: Vec<widgets::Row> = outputs
+                    .iter()
+                    .map(|o| widgets::Row { label: o.name.clone(), detail: None, marked: o.current })
+                    .collect();
+                widgets::list(p, list_at, s, &rows, *sel, "No sound outputs found");
+            }
+            Some(Overlay::Wifi(menu)) => menu.draw(p, screen, list_at, s, t),
+            None => {}
+        }
 
         // Fade to black, with "Opening Flex..." in the middle while the app starts.
         if veil > 0.0 {

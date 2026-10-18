@@ -78,7 +78,7 @@ pub struct Item {
     /// Program and arguments to run.
     #[serde(default)]
     pub command: Vec<String>,
-    /// Built-in action instead of a command: reboot, poweroff, network, sound, quit.
+    /// Built-in action instead of a command: reboot, poweroff, network, sound, wifi, quit.
     #[serde(default)]
     pub action: Option<String>,
     /// Overrides [display] scale for this app.

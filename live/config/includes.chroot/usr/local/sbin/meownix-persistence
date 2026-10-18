@@ -12,6 +12,25 @@ set -eu
 
 log() { echo "meownix-persistence: $*"; }
 
+# What to keep. /home: the tv user's settings (sound output, Flex's library,
+# ...). /etc/meownix: menu.toml and the network share login.
+# /etc/NetworkManager/system-connections: Wi-Fi networks joined, and their passwords.
+KEEP="/home union
+/etc/meownix union
+/etc/NetworkManager/system-connections union"
+
+# Already have a partition: make sure it keeps everything in $KEEP (a stick
+# set up by an older meownix may not), from the next boot.
+existing=$(findmnt -n -o TARGET -S LABEL=persistence 2>/dev/null | head -1 || true)
+if [ -n "$existing" ]; then
+    echo "$KEEP" | while read -r line; do
+        grep -qxF "$line" "$existing/persistence.conf" 2>/dev/null || {
+            echo "$line" >> "$existing/persistence.conf"
+            log "now keeping ${line% *} too, from the next boot"
+        }
+    done
+    exit 0
+fi
 if [ -n "$(blkid -L persistence 2>/dev/null || true)" ]; then
     exit 0
 fi
@@ -60,9 +79,7 @@ mkfs.ext4 -q -F -L persistence "$part"
 
 mnt=$(mktemp -d)
 mount "$part" "$mnt"
-# /home: the tv user's settings (sound output, Flex's library, ...).
-# /etc/meownix: menu.toml and the network share login.
-printf '%s\n' "/home union" "/etc/meownix union" > "$mnt/persistence.conf"
+echo "$KEEP" > "$mnt/persistence.conf"
 umount "$mnt"
 rmdir "$mnt"
 log "made $part; settings are kept from the next boot"

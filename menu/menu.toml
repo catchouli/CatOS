@@ -69,6 +69,11 @@ icon = "sliders"
   icon = "speaker"
   action = "sound"
 
+  [[category.item]]
+  name = "Wi-Fi"
+  icon = "network"
+  action = "wifi"
+
 [[category]]
 name = "System"
 icon = "gear"
