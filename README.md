@@ -65,6 +65,14 @@ settings (the sound output, the network share login, and so on), and keeps them
 there from then on. `flash.sh` keeps that partition when it writes a new version,
 so updating doesn't lose your settings. (Writing the image with plain `dd` does.)
 
+A few extras are picked up from `cache/` if they're there, and kept out of the repo:
+
+- `cache/ssh/authorized_keys`: SSH keys that can log in as `tv`. SSH only takes
+  keys, so without this there's no way in over the network.
+- `cache/shares`: network shares to mount at `/media/<name>`, one `//server/share`
+  per line (add `rw` after it for read/write), with the login in
+  `cache/smb-credentials` (`username=` and `password=` lines).
+
 To try it out in a VM first (on a Mac), `brew install vfkit`, then
 `./build.sh arm64` and `vm/run.sh`. It's the same system built for ARM, so it runs
 at full speed on Apple Silicon.

@@ -51,6 +51,8 @@ wlr-randr
 
 # Networking
 network-manager
+# Network shares (see /etc/meownix/shares)
+cifs-utils
 # Saved settings on the USB stick (meownix-persistence)
 fdisk
 e2fsprogs

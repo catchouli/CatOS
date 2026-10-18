@@ -1,0 +1,5 @@
+# Network shares to mount at /media/<last part of the path>, one per line,
+# read-only unless followed by "rw", e.g.
+#   //server/movies
+#   //server/cache/flex rw
+# build.sh replaces this with cache/shares if there is one.

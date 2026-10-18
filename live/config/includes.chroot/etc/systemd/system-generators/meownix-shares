@@ -1,0 +1,51 @@
+#!/bin/sh
+# Mounts the network shares listed in /etc/meownix/shares at /media/<last part
+# of the path>, the first time something opens them. One share per line,
+# read-only unless it's followed by "rw":
+#   //server/movies
+#   //server/cache/flex rw
+# Logs in with /etc/meownix/smb-credentials if it's there (see smbmount(8):
+# username=, password=, domain=), or as a guest if not.
+# Systemd runs this at boot and on `systemctl daemon-reload`.
+set -eu
+out=$1
+conf=/etc/meownix/shares
+creds=/etc/meownix/smb-credentials
+[ -f "$conf" ] || exit 0
+
+if [ -f "$creds" ]; then login="credentials=$creds"; else login=guest; fi
+
+grep -v '^[[:space:]]*\(#\|$\)' "$conf" | while read -r share mode _; do
+    where=/media/${share##*/}
+    if [ "$mode" = rw ]; then
+        access=rw,file_mode=0644,dir_mode=0755
+    else
+        access=ro,file_mode=0444,dir_mode=0555
+    fi
+    unit=$(systemd-escape --path "$where")
+    cat > "$out/$unit.mount" <<UNIT
+[Unit]
+Description=Network share $share
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=$share
+Where=$where
+Type=cifs
+Options=$access,$login,uid=tv,gid=tv,iocharset=utf8,_netdev,nofail
+TimeoutSec=20
+UNIT
+    cat > "$out/$unit.automount" <<UNIT
+[Unit]
+Description=Network share $share (mounted when first opened)
+
+[Automount]
+Where=$where
+
+[Install]
+WantedBy=remote-fs.target
+UNIT
+    mkdir -p "$out/remote-fs.target.wants"
+    ln -sf "../$unit.automount" "$out/remote-fs.target.wants/$unit.automount"
+done

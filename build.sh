@@ -10,6 +10,8 @@
 #   cache/avatar/                 a Live2D model (its .model3.json and files)
 #   cache/ssh/authorized_keys     SSH keys that can log in as tv (otherwise
 #                                 SSH has no way in: password logins are off)
+#   cache/shares                  network shares to mount (see /etc/meownix/shares)
+#   cache/smb-credentials         the login for them (username=, password=)
 # With both, the menu shows the avatar; see [avatar] in menu/menu.toml.
 #
 # Everything runs in Docker. live-build works inside a Docker volume rather than
@@ -82,6 +84,8 @@ docker run --rm --privileged --platform "linux/$arch" \
             mkdir -p $inc/usr/share/meownix
             cp -r /cache/avatar $inc/usr/share/meownix/avatar
         fi
+        [ -f /cache/shares ] && install -m644 /cache/shares $inc/etc/meownix/shares
+        [ -f /cache/smb-credentials ] && install -m600 /cache/smb-credentials $inc/etc/meownix/smb-credentials
         if [ -f /cache/ssh/authorized_keys ]; then
             install -d -m700 $inc/etc/skel-meownix/.ssh
             install -m600 /cache/ssh/authorized_keys $inc/etc/skel-meownix/.ssh/authorized_keys
