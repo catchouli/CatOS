@@ -1,0 +1,11 @@
+[Unit]
+Description=Make a partition on the USB stick for saved settings
+ConditionPathIsDirectory=/run/live/medium
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/meownix-persistence
+
+[Install]
+WantedBy=multi-user.target

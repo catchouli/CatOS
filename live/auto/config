@@ -25,5 +25,5 @@ lb config noauto \
   --updates true \
   --iso-application "meownix" \
   --iso-volume "MEOWNIX" \
-  --bootappend-live "boot=live components quiet loglevel=3 vt.global_cursor_default=0 hostname=meownix username=tv live-config.noautologin timezone=Europe/London locales=en_GB.UTF-8" \
+  --bootappend-live "boot=live components persistence quiet loglevel=3 vt.global_cursor_default=0 hostname=meownix username=tv live-config.noautologin timezone=Europe/London locales=en_GB.UTF-8" \
   "${@}"

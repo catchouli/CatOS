@@ -1,0 +1,68 @@
+#!/bin/sh
+# Gives a meownix USB stick somewhere to keep settings. On a boot from a stick
+# that hasn't got one yet, adds a partition labelled "persistence" in the free
+# space after the image. live-boot (booted with "persistence") keeps the folders
+# listed in its persistence.conf there from the next boot on.
+#
+# It starts 8 GiB in (on sticks big enough), leaving room for bigger images, so
+# flash.sh can write a new image and put this partition back in the table.
+# Writing an image with plain dd loses the partition table entry, and with it
+# the settings; the next boot makes a fresh partition.
+set -eu
+
+log() { echo "meownix-persistence: $*"; }
+
+if [ -n "$(blkid -L persistence 2>/dev/null || true)" ]; then
+    exit 0
+fi
+
+# The device the live system booted from: the whole stick, or a partition on it.
+medium=$(findmnt -n -o SOURCE /run/live/medium 2>/dev/null || true)
+[ -n "$medium" ] || { log "not booted from a live medium"; exit 0; }
+if [ "$(lsblk -n -d -o TYPE "$medium")" = disk ]; then
+    disk=$medium
+else
+    disk=/dev/$(lsblk -n -o PKNAME "$medium" | head -1)
+fi
+
+# Only ever a USB stick, never a computer's own disk. (meownix.persistence=any
+# on the boot line allows any disk, for testing in a VM.)
+if [ "$(lsblk -n -d -o TRAN "$disk")" != usb ] && ! grep -qw meownix.persistence=any /proc/cmdline; then
+    log "$disk isn't a USB stick, leaving it alone"
+    exit 0
+fi
+# Partition 3's name: sdb3, but mmcblk0p3 / nvme0n1p3 after a digit.
+case $disk in *[0-9]) part=${disk}p3 ;; *) part=${disk}3 ;; esac
+if sfdisk -d "$disk" 2>/dev/null | grep -q "^$part :"; then
+    log "$disk already has a third partition, leaving it alone"
+    exit 0
+fi
+
+# Start 8 GiB in if the stick has room, else just after the image, on a 1 MiB boundary.
+end=$(sfdisk -d "$disk" | sed -n 's/.*start= *\([0-9]*\), *size= *\([0-9]*\).*/\1 \2/p' |
+      awk '{ e = $1 + $2; if (e > max) max = e } END { print max + 0 }')
+start=$(( (end + 2047) / 2048 * 2048 ))
+total=$(blockdev --getsz "$disk")
+roomy=$(( 8 * 1024 * 2048 ))  # 8 GiB in sectors
+if [ $start -lt $roomy ] && [ $(( (total - roomy) / 2048 )) -ge 1024 ]; then
+    start=$roomy
+fi
+if [ $(( (total - start) / 2048 )) -lt 512 ]; then
+    log "less than 512 MiB free on $disk, not adding a partition"
+    exit 0
+fi
+
+log "adding a persistence partition on $disk from sector $start"
+echo "$start,,83" | sfdisk --quiet --no-reread --label dos -N 3 "$disk"
+partx -a -n 3 "$disk" 2>/dev/null || partx -u "$disk"
+udevadm settle
+mkfs.ext4 -q -F -L persistence "$part"
+
+mnt=$(mktemp -d)
+mount "$part" "$mnt"
+# /home: the tv user's settings (sound output, Flex's library, ...).
+# /etc/meownix: menu.toml and the network share login.
+printf '%s\n' "/home union" "/etc/meownix union" > "$mnt/persistence.conf"
+umount "$mnt"
+rmdir "$mnt"
+log "made $part; settings are kept from the next boot"

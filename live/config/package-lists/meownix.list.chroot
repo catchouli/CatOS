@@ -51,6 +51,9 @@ wlr-randr
 
 # Networking
 network-manager
+# Saved settings on the USB stick (meownix-persistence)
+fdisk
+e2fsprogs
 # Remote login for testing, by key only (see build.sh: cache/ssh/authorized_keys)
 openssh-server
 

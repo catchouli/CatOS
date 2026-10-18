@@ -53,14 +53,17 @@ You'll need Docker. Then:
 ```
 
 That builds `out/meownix-amd64.iso`, which you can write to a USB stick and boot
-from. Check the disk number with `diskutil list` first, because this wipes it:
+from. Check the disk number with `diskutil list` first (`lsblk` on Linux), because
+this wipes the stick:
 
 ```sh
-diskutil unmountDisk /dev/diskN
-sudo dd if=out/meownix-amd64.iso of=/dev/rdiskN bs=4m status=progress
+./flash.sh /dev/diskN
 ```
 
-On Linux it's the same `dd`, with `/dev/sdX` from `lsblk`.
+On its first boot, meownix makes a partition in the stick's spare space for saved
+settings (the sound output, the network share login, and so on), and keeps them
+there from then on. `flash.sh` keeps that partition when it writes a new version,
+so updating doesn't lose your settings. (Writing the image with plain `dd` does.)
 
 To try it out in a VM first (on a Mac), `brew install vfkit`, then
 `./build.sh arm64` and `vm/run.sh`. It's the same system built for ARM, so it runs
