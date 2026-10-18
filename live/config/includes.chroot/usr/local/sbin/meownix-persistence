@@ -6,8 +6,9 @@
 #
 # It starts 8 GiB in (on sticks big enough), leaving room for bigger images, so
 # flash.sh can write a new image and put this partition back in the table.
-# Writing an image with plain dd loses the partition table entry, and with it
-# the settings; the next boot makes a fresh partition.
+# Writing an image with plain dd loses the partition table entry, but not the
+# settings: the next boot finds them where the partition would go and puts the
+# entry back.
 set -eu
 
 log() { echo "meownix-persistence: $*"; }
@@ -71,6 +72,18 @@ if [ $start -lt $roomy ] && [ $(( (total - roomy) / 2048 )) -ge 1024 ]; then
 fi
 if [ $(( (total - start) / 2048 )) -lt 512 ]; then
     log "less than 512 MiB free on $disk, not adding a partition"
+    exit 0
+fi
+
+# Settings from before may still be there: writing an image without flash.sh
+# loses the partition's table entry, not its data. Put the entry back instead
+# of formatting over them.
+if blkid -p -O $(( start * 512 )) -o export "$disk" 2>/dev/null |
+   grep -qx 'LABEL=persistence'; then
+    log "found the saved settings at sector $start on $disk, putting them back"
+    echo "$start,,83" | sfdisk --quiet --no-reread --label dos -N 3 "$disk"
+    partx -a -n 3 "$disk" 2>/dev/null || partx -u "$disk"
+    log "they're back from the next boot"
     exit 0
 fi
 
