@@ -1,7 +1,7 @@
 # meownix menu. Installed as /etc/meownix/menu.toml; a copy in
 # ~/.config/meownix/menu.toml overrides it.
 #
-# Icons: tv, gear, play, youtube, film, power, restart, network
+# Icons: tv, gear, sliders, speaker, play, youtube, film, power, restart, network
 
 [controls]
 # Linux key names (run `evtest` on the box to see what the remote sends).
@@ -53,6 +53,15 @@ icon = "tv"
     # Pretend to be a Samsung TV so YouTube serves its TV interface.
     "Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.5) AppleWebKit/537.36 (KHTML, like Gecko) 85.0.4183.93/6.5 TV Safari/537.36",
   ]
+
+[[category]]
+name = "Settings"
+icon = "sliders"
+
+  [[category.item]]
+  name = "Sound"
+  icon = "speaker"
+  action = "sound"
 
 [[category]]
 name = "System"

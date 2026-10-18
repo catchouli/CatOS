@@ -73,6 +73,25 @@ pub fn draw(p: &Painter, name: &str, center: Pos2, size: f32, color: Color32, cu
             }
             p.circle_filled(at(0.5, 0.74), size * 0.07, color);
         }
+        "sliders" => {
+            for (x, knob) in [(0.24, 0.62), (0.5, 0.32), (0.76, 0.54)] {
+                p.line_segment([at(x, 0.12), at(x, 0.88)], stroke);
+                p.circle_filled(at(x, knob), size * 0.09, color);
+            }
+        }
+        "speaker" => {
+            p.add(Shape::convex_polygon(
+                [(0.1, 0.38), (0.26, 0.38), (0.48, 0.18), (0.48, 0.82), (0.26, 0.62), (0.1, 0.62)]
+                    .iter()
+                    .map(|&(x, y)| at(x, y))
+                    .collect(),
+                color,
+                Stroke::NONE,
+            ));
+            for rad in [0.18, 0.32] {
+                p.add(arc(0.5, 0.5, rad, -50.0, 50.0));
+            }
+        }
         _ => {
             p.circle_stroke(at(0.5, 0.5), size * 0.4, stroke);
         }

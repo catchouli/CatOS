@@ -68,11 +68,13 @@ at full speed on Apple Silicon.
 
 ## Remote controls
 
-Left and right switch between Watch and System, up and down pick an app, OK opens it.
+Left and right switch between Watch, Settings and System, up and down pick an app,
+OK opens it.
 Hold Back for a second, or press Home, to close the app and go back to the menu.
 
-Restart and Shut down are under System, and you have to press OK twice so nobody
-turns it off by accident. System also shows the box's IP address.
+Settings → Sound picks where the sound goes: the TV over HDMI, a USB sound card,
+and so on. Restart and Shut down are under System, and you have to press OK twice
+so nobody turns it off by accident. System also shows the box's IP address.
 
 The cursor only shows up while you're moving the air-mouse, and hides again a few
 seconds after you stop.
