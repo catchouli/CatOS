@@ -23,6 +23,7 @@ pub struct Display {
     pub scale: f32,
     /// Screen mode to switch to when the menu starts, e.g. "1920x1080" or
     /// "1920x1080@60", if the screen offers it. "auto" keeps the screen's own.
+    /// A mode picked in Settings → Resolution takes its place.
     pub mode: String,
 }
 
@@ -78,7 +79,7 @@ pub struct Item {
     /// Program and arguments to run.
     #[serde(default)]
     pub command: Vec<String>,
-    /// Built-in action instead of a command: reboot, poweroff, network, sound, wifi, quit.
+    /// Built-in action instead of a command: reboot, poweroff, network, sound, wifi, resolution, quit.
     #[serde(default)]
     pub action: Option<String>,
     /// Overrides [display] scale for this app.

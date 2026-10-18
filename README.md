@@ -86,7 +86,8 @@ Hold Back for a second, or press Home, to close the app and go back to the menu.
 Settings → Sound picks where the sound goes: the TV over HDMI, a USB sound card,
 and so on. Settings → Wi-Fi lists the networks nearby; pick one and type its
 password with the on-screen keyboard (arrows and OK), and it connects by itself
-from then on. Restart and Shut down are under System, and you have to press OK twice
+from then on. Settings → Resolution changes the screen mode, and goes back by
+itself after 10 seconds unless you say to keep it. Restart and Shut down are under System, and you have to press OK twice
 so nobody turns it off by accident. System also shows the box's IP address.
 
 The cursor only shows up while you're moving the air-mouse, and hides again a few

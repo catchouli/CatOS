@@ -13,6 +13,7 @@
 mod audio;
 mod avatar;
 mod config;
+mod display;
 mod icons;
 mod keyboard;
 #[cfg(target_os = "linux")]
@@ -88,6 +89,7 @@ fn local_ip() -> Option<String> {
 enum Overlay {
     Sound { outputs: Vec<audio::Output>, sel: usize },
     Wifi(wifi::Menu),
+    Display(display::Menu),
 }
 
 /// An app waiting for the fade-out to finish before it starts.
@@ -116,6 +118,8 @@ struct Menu {
     sound: Option<(Option<String>, Instant)>,
     /// The Wi-Fi status, for the Wi-Fi item's description, and when it was looked up.
     wifi: Option<(String, Instant)>,
+    /// The screen mode, for the Resolution item's description.
+    resolution: Option<(String, Instant)>,
     overlay: Option<Overlay>,
     launching: Option<Launch>,
     /// The app that's opening or open, while the menu sits behind it in black.
@@ -144,6 +148,7 @@ impl Menu {
             ip_checked: None,
             sound: None,
             wifi: None,
+            resolution: None,
             overlay: None,
             launching: None,
             opening: None,
@@ -183,6 +188,13 @@ impl Menu {
                     self.overlay = None;
                     self.wifi = None; // look it up again
                 }
+                return;
+            }
+            Some(Overlay::Display(menu)) => {
+                if !menu.update(ctx) {
+                    self.overlay = None;
+                }
+                self.resolution = None; // it may have changed
                 return;
             }
             None => {}
@@ -239,6 +251,7 @@ impl Menu {
                 self.overlay = Some(Overlay::Sound { outputs, sel });
             }
             Some("wifi") => self.overlay = Some(Overlay::Wifi(wifi::Menu::open())),
+            Some("resolution") => self.overlay = Some(Overlay::Display(display::Menu::open())),
             Some(_) => {}
             None if !command.is_empty() => {
                 // Fade out first; ui() starts the app when the fade is done.
@@ -283,6 +296,12 @@ impl Menu {
             }
             let current = self.sound.as_ref().and_then(|(name, _)| name.clone());
             return current.unwrap_or_else(|| "No sound output found".into());
+        }
+        if item.action.as_deref() == Some("resolution") {
+            if self.resolution.as_ref().is_none_or(|(_, t)| t.elapsed() > Duration::from_secs(3)) {
+                self.resolution = Some((display::status(), Instant::now()));
+            }
+            return self.resolution.as_ref().map(|(s, _)| s.clone()).unwrap_or_default();
         }
         if item.action.as_deref() == Some("wifi") {
             if self.wifi.as_ref().is_none_or(|(_, t)| t.elapsed() > Duration::from_secs(3)) {
@@ -439,6 +458,7 @@ impl Menu {
                 widgets::list(p, list_at, s, &rows, *sel, "No sound outputs found");
             }
             Some(Overlay::Wifi(menu)) => menu.draw(p, screen, list_at, s, t),
+            Some(Overlay::Display(menu)) => menu.draw(p, list_at, s),
             None => {}
         }
 
@@ -506,21 +526,6 @@ impl eframe::App for Menu {
     }
 }
 
-/// Switches every screen to `mode` with wlr-randr, where it's offered.
-fn set_screen_mode(mode: &str) {
-    let out = match std::process::Command::new("wlr-randr").output() {
-        Ok(out) => String::from_utf8_lossy(&out.stdout).into_owned(),
-        Err(e) => return eprintln!("meownix-menu: can't run wlr-randr to set the screen mode: {e}"),
-    };
-    // Screens are the unindented lines; their details are indented below.
-    for name in out.lines().filter(|l| !l.starts_with(' ')).filter_map(|l| l.split_whitespace().next()) {
-        let status = std::process::Command::new("wlr-randr").args(["--output", name, "--mode", mode]).status();
-        if !status.is_ok_and(|s| s.success()) {
-            eprintln!("meownix-menu: couldn't set {name} to {mode}");
-        }
-    }
-}
-
 fn setup_fonts(ctx: &egui::Context) {
     let Some(bytes) = FONT_CANDIDATES.iter().find_map(|p| std::fs::read(p).ok()) else {
         return;
@@ -559,7 +564,7 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions { viewport, ..Default::default() };
 
     if !windowed && !dry_run && cfg.display.mode != "auto" {
-        set_screen_mode(&cfg.display.mode);
+        display::set_startup_mode(&cfg.display.mode);
     }
 
     let runner = Runner::new(dry_run);

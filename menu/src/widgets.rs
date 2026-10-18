@@ -1,6 +1,6 @@
 //! The lists that open under a Settings item (Sound, Wi-Fi).
 
-use eframe::egui::{Align2, Color32, FontId, Painter, Pos2, Rect, pos2, vec2};
+use eframe::egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Shape, Stroke, pos2, vec2};
 
 pub struct Row {
     pub label: String,
@@ -11,6 +11,8 @@ pub struct Row {
 }
 
 const ROW_H: f32 = 52.0;
+/// Longer lists scroll, keeping the selection in view.
+const MAX_ROWS: usize = 8;
 
 fn white(alpha: u8) -> Color32 {
     Color32::from_rgba_unmultiplied(255, 255, 255, alpha)
@@ -24,8 +26,22 @@ pub fn list(p: &Painter, at: Pos2, s: f32, rows: &[Row], sel: usize, empty: &str
     }
     let font = FontId::proportional(28.0 * s);
     let small = FontId::proportional(22.0 * s);
-    for (k, row) in rows.iter().enumerate() {
-        let y = at.y + k as f32 * ROW_H * s;
+    let first = sel.saturating_sub(MAX_ROWS - 1).min(rows.len().saturating_sub(MAX_ROWS));
+    let shown = first..(first + MAX_ROWS).min(rows.len());
+    // "More" marks above and below when the list goes on.
+    let arrow = |y: f32, up: bool| {
+        let (x, h) = (at.x + 10.0 * s, if up { -7.0 * s } else { 7.0 * s });
+        let pts = vec![pos2(x - 9.0 * s, y - h), pos2(x + 9.0 * s, y - h), pos2(x, y + h)];
+        p.add(Shape::convex_polygon(pts, white(120), Stroke::NONE));
+    };
+    if first > 0 {
+        arrow(at.y - 0.62 * ROW_H * s, true);
+    }
+    if shown.end < rows.len() {
+        arrow(at.y + (MAX_ROWS as f32 - 0.38) * ROW_H * s, false);
+    }
+    for (k, row) in rows.iter().enumerate().skip(first).take(MAX_ROWS) {
+        let y = at.y + (k - first) as f32 * ROW_H * s;
         let selected = k == sel;
         let label = p.layout_no_wrap(row.label.clone(), font.clone(), white(if selected { 255 } else { 140 }));
         let mut width = label.size().x;

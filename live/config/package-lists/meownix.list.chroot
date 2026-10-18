@@ -50,6 +50,8 @@ libcuda1
 
 # Sets the screen mode when the session starts (see [display] mode)
 wlr-randr
+# Screenshots over SSH, for checking what's on screen remotely
+grim
 
 # Networking. NetworkManager needs wpa_supplicant for Wi-Fi (it only
 # "recommends" it, and the image skips recommends).
