@@ -13,7 +13,8 @@ echo 'Europe/London' > /etc/timezone
 if ! id tv >/dev/null 2>&1; then
     useradd --create-home --shell /bin/bash --user-group \
             --groups audio,video,render,input,netdev,sudo tv
-    # No password for now. Set one before we expose SSH or install to disk.
+    # No password for now. SSH only takes keys (see sshd_config.d/meownix.conf);
+    # set one before installing to disk.
     passwd -d tv
 fi
 cp -rT /etc/skel-meownix /home/tv

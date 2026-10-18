@@ -51,6 +51,8 @@ wlr-randr
 
 # Networking
 network-manager
+# Remote login for testing, by key only (see build.sh: cache/ssh/authorized_keys)
+openssh-server
 
 # Audio
 pipewire
