@@ -33,8 +33,8 @@ FREETUBE_URL="https://github.com/FreeTubeApp/FreeTube/releases/download/v${FREET
 
 # Flex, installed at /opt/flex (x86_64 only: there's no ARM build). To update,
 # change both lines; the checksum is on the release page.
-FLEX_VERSION=0.10.0
-FLEX_SHA256=0d4c41db2b712aa9fb070ceb76c0c7a8ca0b5eac1b572fe285aa7d142f674e25
+FLEX_VERSION=0.17.0
+FLEX_SHA256=90399fda2b378bbc418bf587a236d157aa1d759be52d3f420d8bb88d5b0de4df
 FLEX_URL="https://github.com/catchouli/flex/releases/download/v${FLEX_VERSION}/flex-v${FLEX_VERSION}-linux-x64.tar.gz"
 
 mkdir -p out cache
