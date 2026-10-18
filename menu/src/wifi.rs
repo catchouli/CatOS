@@ -21,6 +21,27 @@ pub struct Network {
     /// NetworkManager has a saved connection for it.
     pub known: bool,
     pub in_use: bool,
+    /// In range now. (Saved networks are listed even when they aren't, so they
+    /// can be forgotten.)
+    pub nearby: bool,
+}
+
+/// What can be done with a saved network.
+#[derive(Clone, Copy)]
+enum Action {
+    Connect,
+    Disconnect,
+    Forget,
+}
+
+impl Action {
+    fn label(self) -> &'static str {
+        match self {
+            Action::Connect => "Connect",
+            Action::Disconnect => "Disconnect",
+            Action::Forget => "Forget this network",
+        }
+    }
 }
 
 /// What the Wi-Fi item's description says.
@@ -38,7 +59,8 @@ pub fn status() -> String {
     }
 }
 
-/// Nearby networks, strongest first, one entry per name.
+/// Nearby networks, strongest first, one entry per name, then saved ones that
+/// aren't in range.
 fn scan() -> Vec<Network> {
     let _ = nmcli(&["radio", "wifi", "on"]);
     let known: Vec<String> = nmcli(&["-t", "-f", "NAME,TYPE", "connection", "show"])
@@ -62,6 +84,7 @@ fn scan() -> Vec<Network> {
             secure: !security.is_empty() && security != "--",
             known: known.contains(ssid),
             in_use: in_use == "*",
+            nearby: true,
         };
         match networks.iter_mut().find(|n| n.ssid == network.ssid) {
             // Several access points with one name: keep the strongest.
@@ -75,7 +98,28 @@ fn scan() -> Vec<Network> {
         }
     }
     networks.sort_by(|a, b| b.in_use.cmp(&a.in_use).then(b.signal.cmp(&a.signal)));
+    for ssid in known {
+        if !networks.iter().any(|n| n.ssid == ssid) {
+            networks.push(Network { ssid, signal: 0, secure: true, known: true, in_use: false, nearby: false });
+        }
+    }
     networks
+}
+
+/// Disconnects the Wi-Fi, which then stays off until a network is picked again.
+fn disconnect() -> Result<String, String> {
+    let devices = nmcli(&["-t", "-f", "DEVICE,TYPE", "device"]).unwrap_or_default();
+    for f in devices.lines().map(fields) {
+        if f.get(1).is_some_and(|t| t == "wifi") {
+            run_nmcli(&["device", "disconnect", &f[0]])?;
+        }
+    }
+    Ok("Disconnected".into())
+}
+
+/// Deletes a saved network, and its password.
+fn forget(ssid: &str) -> Result<String, String> {
+    run_nmcli(&["connection", "delete", "id", ssid]).map(|()| format!("Forgot {ssid}"))
 }
 
 /// Why connecting failed.
@@ -146,8 +190,12 @@ pub struct Menu {
 enum State {
     Scanning(Receiver<Vec<Network>>),
     List { networks: Vec<Network>, sel: usize },
+    /// What to do with a saved network.
+    Actions { network: Network, actions: Vec<Action>, sel: usize },
     Password { network: Network, keyboard: Keyboard },
     Connecting { ssid: String, done: Receiver<Result<(), Failure>>, network: Network },
+    /// Disconnecting or forgetting: the message to show when it's done.
+    Working { text: String, done: Receiver<Result<String, String>> },
     Message { text: String, until: Instant },
 }
 
@@ -186,14 +234,41 @@ impl Menu {
                 }
                 if pressed(Key::Enter) || pressed(Key::Space) {
                     let Some(network) = networks.get(*sel).cloned() else { return false };
-                    if network.in_use {
-                        return false;
-                    }
-                    self.state = if network.secure && !network.known {
+                    let actions = if network.in_use {
+                        vec![Action::Disconnect, Action::Forget]
+                    } else if network.known && network.nearby {
+                        vec![Action::Connect, Action::Forget]
+                    } else if network.known {
+                        vec![Action::Forget]
+                    } else {
+                        vec![]
+                    };
+                    self.state = if !actions.is_empty() {
+                        State::Actions { network, actions, sel: 0 }
+                    } else if network.secure {
                         let prompt = format!("Password for {}", network.ssid);
                         State::Password { network, keyboard: Keyboard::new(prompt) }
                     } else {
                         start(network, None)
+                    };
+                }
+            }
+            State::Actions { network, actions, sel } => {
+                if back || pressed(Key::ArrowLeft) || pressed(Key::Backspace) {
+                    return false;
+                }
+                if pressed(Key::ArrowUp) && *sel > 0 {
+                    *sel -= 1;
+                }
+                if pressed(Key::ArrowDown) && *sel + 1 < actions.len() {
+                    *sel += 1;
+                }
+                if pressed(Key::Enter) || pressed(Key::Space) {
+                    let network = network.clone();
+                    self.state = match actions[*sel] {
+                        Action::Connect => start(network, None),
+                        Action::Disconnect => work(format!("Disconnecting from {}", network.ssid), disconnect),
+                        Action::Forget => work(format!("Forgetting {}", network.ssid), move || forget(&network.ssid)),
                     };
                 }
             }
@@ -221,6 +296,15 @@ impl Menu {
                     };
                 }
             }
+            State::Working { done, .. } => {
+                if let Ok(result) = done.try_recv() {
+                    let (text, secs) = match result {
+                        Ok(text) => (text, 2),
+                        Err(e) => (format!("That didn't work: {e}"), 6),
+                    };
+                    self.state = State::Message { text, until: Instant::now() + Duration::from_secs(secs) };
+                }
+            }
             State::Message { until, .. } => {
                 if Instant::now() > *until || back || pressed(Key::Enter) {
                     return false;
@@ -242,14 +326,26 @@ impl Menu {
                     .iter()
                     .map(|n| Row {
                         label: n.ssid.clone(),
-                        detail: Some(format!("{}{}", strength(n.signal), if n.secure { " · password" } else { "" })),
+                        detail: Some(if !n.nearby {
+                            "Saved · not nearby".to_owned()
+                        } else {
+                            let what = if n.known { " · saved" } else if n.secure { " · password" } else { "" };
+                            format!("{}{what}", strength(n.signal))
+                        }),
                         marked: n.in_use,
                     })
                     .collect();
                 widgets::list(p, at, s, &rows, *sel, "No networks found");
             }
+            State::Actions { network, actions, sel } => {
+                note(network.ssid.clone());
+                let rows: Vec<Row> =
+                    actions.iter().map(|a| Row { label: a.label().into(), detail: None, marked: false }).collect();
+                widgets::list(p, at + egui::vec2(0.0, 52.0 * s), s, &rows, *sel, "");
+            }
             State::Password { keyboard, .. } => keyboard.draw(p, screen, s),
             State::Connecting { ssid, .. } => note(format!("Connecting to {ssid}{dots}")),
+            State::Working { text, .. } => note(format!("{text}{dots}")),
             State::Message { text, .. } => note(text.clone()),
         }
     }
@@ -263,6 +359,15 @@ fn start(network: Network, password: Option<String>) -> State {
         let _ = tx.send(connect(&for_thread, password.as_deref()));
     });
     State::Connecting { ssid, done: rx, network }
+}
+
+/// Runs `job` in the background, showing `text` until it's done.
+fn work(text: String, job: impl FnOnce() -> Result<String, String> + Send + 'static) -> State {
+    let (tx, rx) = channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(job());
+    });
+    State::Working { text, done: rx }
 }
 
 /// Signal strength in words.
