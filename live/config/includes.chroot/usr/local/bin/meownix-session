@@ -17,6 +17,13 @@ if systemd-detect-virt -q; then
     export MOZ_ENABLE_WAYLAND=0
 fi
 
+# No GPU driver (e.g. booted with nomodeset): there's only a plain framebuffer,
+# and wlroots won't use GL without a GPU, so draw in software instead.
+if [ ! -e /dev/dri/renderD128 ]; then
+    export WLR_RENDERER=pixman
+    unset LIBVA_DRIVER_NAME
+fi
+
 mkdir -p "$HOME/.local/state/meownix"
 log="$HOME/.local/state/meownix/session.log"
 [ -f "$log" ] && mv "$log" "$log.old"
