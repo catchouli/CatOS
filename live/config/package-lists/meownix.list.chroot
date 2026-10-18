@@ -51,8 +51,10 @@ libcuda1
 # Sets the screen mode when the session starts (see [display] mode)
 wlr-randr
 
-# Networking
+# Networking. NetworkManager needs wpa_supplicant for Wi-Fi (it only
+# "recommends" it, and the image skips recommends).
 network-manager
+wpasupplicant
 # Network shares (see /etc/meownix/shares)
 cifs-utils
 # Saved settings on the USB stick (meownix-persistence)

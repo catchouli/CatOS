@@ -1,0 +1,7 @@
+// Lets the tv user (in netdev) scan for and join networks from the menu,
+// without being asked for a password it hasn't got.
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 && subject.isInGroup("netdev")) {
+        return polkit.Result.YES;
+    }
+});

@@ -15,9 +15,12 @@ log() { echo "meownix-persistence: $*"; }
 # What to keep. /home: the tv user's settings (sound output, Flex's library,
 # ...). /etc/meownix: menu.toml and the network share login.
 # /etc/NetworkManager/system-connections: Wi-Fi networks joined, and their passwords.
+# /etc/ssh: the box's SSH host keys, made on its first boot (otherwise they're
+# new every boot, and SSH warns that the box has changed).
 KEEP="/home union
 /etc/meownix union
-/etc/NetworkManager/system-connections union"
+/etc/NetworkManager/system-connections union
+/etc/ssh union"
 
 # Already have a partition: make sure it keeps everything in $KEEP (a stick
 # set up by an older meownix may not), from the next boot.
