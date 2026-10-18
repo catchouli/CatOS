@@ -44,6 +44,8 @@ libnvidia-egl-gbm1
 libnvidia-allocator1
 libgles-nvidia2
 libglx-nvidia0
+# CUDA, for hardware video decoding in mpv/Flex (hwdec=nvdec)
+libcuda1
 #endif
 
 # Sets the screen mode when the session starts (see [display] mode)
@@ -81,6 +83,9 @@ libwayland-client0
 libwayland-egl1
 libwayland-cursor0
 libxkbcommon0
+
+# Video playback for Flex (it loads libmpv.so.2)
+libmpv2
 
 # Apps. FreeTube is not in Debian: build.sh drops its .deb into config/packages.chroot
 firefox-esr
