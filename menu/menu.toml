@@ -16,6 +16,11 @@ hold_seconds = 1.0
 # couch. It's adjusted for the real resolution, so apps look the same size on
 # any screen. An app can set its own `scale` to override it.
 scale = 1.75
+# Screen mode to use, if the screen offers it: "1920x1080", "1920x1080@60", or
+# "auto" for the screen's own preferred mode. 1080p is what the menu and apps
+# are designed for, and the easiest for the box's GPU (and for some drivers:
+# nouveau can't do 4K over DisplayPort on some cards).
+mode = "1920x1080"
 
 [avatar]
 # A Live2D model to show beside the menu: its .model3.json, or a folder with

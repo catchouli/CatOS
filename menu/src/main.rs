@@ -424,6 +424,21 @@ impl eframe::App for Menu {
     }
 }
 
+/// Switches every screen to `mode` with wlr-randr, where it's offered.
+fn set_screen_mode(mode: &str) {
+    let out = match std::process::Command::new("wlr-randr").output() {
+        Ok(out) => String::from_utf8_lossy(&out.stdout).into_owned(),
+        Err(e) => return eprintln!("meownix-menu: can't run wlr-randr to set the screen mode: {e}"),
+    };
+    // Screens are the unindented lines; their details are indented below.
+    for name in out.lines().filter(|l| !l.starts_with(' ')).filter_map(|l| l.split_whitespace().next()) {
+        let status = std::process::Command::new("wlr-randr").args(["--output", name, "--mode", mode]).status();
+        if !status.is_ok_and(|s| s.success()) {
+            eprintln!("meownix-menu: couldn't set {name} to {mode}");
+        }
+    }
+}
+
 fn setup_fonts(ctx: &egui::Context) {
     let Some(bytes) = FONT_CANDIDATES.iter().find_map(|p| std::fs::read(p).ok()) else {
         return;
@@ -460,6 +475,10 @@ fn main() -> eframe::Result {
         viewport.with_fullscreen(true)
     };
     let options = eframe::NativeOptions { viewport, ..Default::default() };
+
+    if !windowed && !dry_run && cfg.display.mode != "auto" {
+        set_screen_mode(&cfg.display.mode);
+    }
 
     let runner = Runner::new(dry_run);
     eframe::run_native(

@@ -46,6 +46,9 @@ libgles-nvidia2
 libglx-nvidia0
 #endif
 
+# Sets the screen mode when the session starts (see [display] mode)
+wlr-randr
+
 # Networking
 network-manager
 

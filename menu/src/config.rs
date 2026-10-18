@@ -21,11 +21,14 @@ pub struct Display {
     /// How much to enlarge apps on a 1080p screen, so they're readable from the
     /// couch. Adjusted for the real resolution, so they look the same size on any screen.
     pub scale: f32,
+    /// Screen mode to switch to when the menu starts, e.g. "1920x1080" or
+    /// "1920x1080@60", if the screen offers it. "auto" keeps the screen's own.
+    pub mode: String,
 }
 
 impl Default for Display {
     fn default() -> Self {
-        Self { scale: 1.75 }
+        Self { scale: 1.75, mode: "1920x1080".into() }
     }
 }
 
