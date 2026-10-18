@@ -25,8 +25,25 @@ firmware-intel-graphics
 firmware-iwlwifi
 firmware-realtek
 firmware-sof-signed
-# NVIDIA GPU firmware for nouveau, so it also runs properly on a desktop PC.
-firmware-nvidia-graphics
+#endif
+
+# NVIDIA's own driver, for PCs with NVIDIA cards (550 still supports Pascal
+# cards like the GTX 10 series). The kernel module is built for the image's
+# kernel at build time (DKMS). It only loads on NVIDIA hardware: Intel boxes like
+# the NGC-1 carry on with Mesa. No Xorg driver: cage only needs EGL and GBM.
+# The libraries below are only "recommended" by nvidia-driver-libs, and the
+# image skips recommends, but cage needs them: without NVIDIA's GBM backend
+# (libnvidia-allocator1) buffers come from Mesa's software renderer and
+# nothing can draw into them.
+#if ARCHITECTURES amd64
+linux-headers-amd64
+nvidia-kernel-dkms
+nvidia-driver-libs
+libegl-nvidia0
+libnvidia-egl-gbm1
+libnvidia-allocator1
+libgles-nvidia2
+libglx-nvidia0
 #endif
 
 # Networking

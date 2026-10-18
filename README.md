@@ -30,6 +30,8 @@ So meownix:
   next to the menu and watches what you're doing.
 
 It's built for a Minix NGC-1, but it should run on pretty much any Intel mini PC.
+It also runs on PCs with NVIDIA graphics (GTX 900 series or newer) using NVIDIA's
+own driver, as long as Secure Boot is turned off.
 
 ## How it works
 

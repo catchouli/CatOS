@@ -17,6 +17,12 @@ if systemd-detect-virt -q; then
     export MOZ_ENABLE_WAYLAND=0
 fi
 
+# NVIDIA's driver: wlroots' hardware cursor tends to go invisible on it.
+if [ -d /sys/module/nvidia_drm ]; then
+    export WLR_NO_HARDWARE_CURSORS=1
+    unset LIBVA_DRIVER_NAME
+fi
+
 # No GPU driver (e.g. booted with nomodeset): there's only a plain framebuffer,
 # and wlroots won't use GL without a GPU, so draw in software instead.
 if [ ! -e /dev/dri/renderD128 ]; then
