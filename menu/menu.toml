@@ -36,6 +36,12 @@ icon = "tv"
   name = "Flex"
   icon = "film"
   description = "Our media library"
+  command = ["/opt/flex/flex"]
+
+  [[category.item]]
+  name = "Flex (web)"
+  icon = "film"
+  description = "Flex on another PC, in the browser"
   command = ["meownix-browser", "flex", "http://192.168.1.110:8484"]
 
   [[category.item]]

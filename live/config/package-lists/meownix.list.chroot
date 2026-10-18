@@ -84,8 +84,10 @@ libwayland-egl1
 libwayland-cursor0
 libxkbcommon0
 
-# Video playback for Flex (it loads libmpv.so.2)
+# Video playback for Flex (it loads libmpv.so.2), and Japanese/Chinese/Korean
+# titles in it
 libmpv2
+fonts-noto-cjk
 
 # Apps. FreeTube is not in Debian: build.sh drops its .deb into config/packages.chroot
 firefox-esr
