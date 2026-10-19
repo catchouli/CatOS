@@ -1,8 +1,8 @@
 [package]
-name = "meownix-menu"
+name = "catos-menu"
 version = "0.1.0"
 edition = "2024"
-description = "Crossbar launcher for the meownix TV box"
+description = "Crossbar launcher for the catos TV box"
 license = "MIT"
 
 [dependencies]

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds out/meownix-<arch>.iso.
+# Builds out/catos-<arch>.iso.
 #
 #   ./build.sh                 x86_64 image, for the real box
 #   ./build.sh arm64           ARM image, for fast VMs on Apple Silicon
@@ -12,7 +12,7 @@
 #                                 SSH has no way in: password logins are off)
 #   cache/flex/                   a Linux build of Flex (unpacked) to use instead
 #                                 of the FLEX_VERSION release, e.g. a CI build
-#   cache/shares                  network shares to mount (see /etc/meownix/shares)
+#   cache/shares                  network shares to mount (see /etc/catos/shares)
 #   cache/smb-credentials         the login for them (username=, password=)
 # With both, the menu shows the avatar; see [avatar] in menu/menu.toml.
 #
@@ -42,22 +42,22 @@ mkdir -p out cache
 # Live2D's SDK, if it's been downloaded (newest first).
 cubism_sdk=$(ls -d cache/CubismSdkForNative-*/ 2>/dev/null | sort -V | tail -1)
 if [ -n "$cubism_sdk" ]; then
-    sdk_args="-v $PWD/$cubism_sdk:/sdk:ro -e MEOWNIX_CUBISM_SDK=/sdk"
+    sdk_args="-v $PWD/$cubism_sdk:/sdk:ro -e CATOS_CUBISM_SDK=/sdk"
     echo "==> Building the menu (Rust, $rust_target, with Live2D from $cubism_sdk)"
 else
     sdk_args=
     echo "==> Building the menu (Rust, $rust_target)"
 fi
-docker build -q -t meownix-rust -f builder/rust.Dockerfile builder >/dev/null
+docker build -q -t catos-rust -f builder/rust.Dockerfile builder >/dev/null
 # shellcheck disable=SC2086 # sdk_args is a list of arguments
 docker run --rm \
     -v "$PWD/menu:/src" \
-    -v meownix-cargo:/usr/local/cargo/registry \
+    -v catos-cargo:/usr/local/cargo/registry \
     -e CARGO_TARGET_DIR=/src/target/linux \
     $sdk_args \
-    meownix-rust \
+    catos-rust \
     cargo build --release --target "$rust_target"
-cp "menu/target/linux/$rust_target/release/meownix-menu" "out/meownix-menu-$arch"
+cp "menu/target/linux/$rust_target/release/catos-menu" "out/catos-menu-$arch"
 [ "${1:-}" = menu ] && exit 0
 
 echo "==> Fetching FreeTube ${FREETUBE_VERSION} ($arch)"
@@ -76,16 +76,16 @@ if [ "$arch" = amd64 ] && [ ! -d cache/flex ]; then
 fi
 
 echo "==> Building the image (Debian live-build, $arch)"
-docker build -q --platform "linux/$arch" -t "meownix-builder-$arch" builder >/dev/null
+docker build -q --platform "linux/$arch" -t "catos-builder-$arch" builder >/dev/null
 docker run --rm --privileged --platform "linux/$arch" \
     -e ARCH="$arch" \
     -e FLEX_VERSION="$FLEX_VERSION" \
-    -v "meownix-build-$arch:/build" \
+    -v "catos-build-$arch:/build" \
     -v "$PWD/live:/src/live:ro" \
     -v "$PWD/menu/menu.toml:/src/menu.toml:ro" \
     -v "$PWD/out:/out" \
     -v "$PWD/cache:/cache:ro" \
-    "meownix-builder-$arch" sh -euc '
+    "catos-builder-$arch" sh -euc '
         # Start from a clean config each time, but keep the apt cache between builds.
         cd /build
         lb clean --purge >/dev/null 2>&1 || true
@@ -93,16 +93,16 @@ docker run --rm --privileged --platform "linux/$arch" \
         cp -a /src/live/. /build/
 
         inc=config/includes.chroot
-        install -Dm755 /out/meownix-menu-$ARCH  $inc/usr/local/bin/meownix-menu
-        install -Dm644 /src/menu.toml           $inc/etc/meownix/menu.toml
+        install -Dm755 /out/catos-menu-$ARCH  $inc/usr/local/bin/catos-menu
+        install -Dm644 /src/menu.toml           $inc/etc/catos/menu.toml
         mkdir -p config/packages.chroot
         cp /cache/freetube_*_$ARCH.deb config/packages.chroot/
 
         # The Live2D avatar, if there is one: the model, and the shaders
         # the Live2D renderer loads at run time.
         if [ -d /cache/avatar ]; then
-            mkdir -p $inc/usr/share/meownix
-            cp -r /cache/avatar $inc/usr/share/meownix/avatar
+            mkdir -p $inc/usr/share/catos
+            cp -r /cache/avatar $inc/usr/share/catos/avatar
         fi
         if [ "$ARCH" = amd64 ]; then
             mkdir -p $inc/opt/flex
@@ -112,22 +112,22 @@ docker run --rm --privileged --platform "linux/$arch" \
                 tar -xzf /cache/flex-v$FLEX_VERSION-linux-x64.tar.gz -C $inc/opt/flex --strip-components=1
             fi
         fi
-        [ -f /cache/shares ] && install -m644 /cache/shares $inc/etc/meownix/shares
-        [ -f /cache/smb-credentials ] && install -m600 /cache/smb-credentials $inc/etc/meownix/smb-credentials
+        [ -f /cache/shares ] && install -m644 /cache/shares $inc/etc/catos/shares
+        [ -f /cache/smb-credentials ] && install -m600 /cache/smb-credentials $inc/etc/catos/smb-credentials
         if [ -f /cache/ssh/authorized_keys ]; then
-            install -d -m700 $inc/etc/skel-meownix/.ssh
-            install -m600 /cache/ssh/authorized_keys $inc/etc/skel-meownix/.ssh/authorized_keys
+            install -d -m700 $inc/etc/skel-catos/.ssh
+            install -m600 /cache/ssh/authorized_keys $inc/etc/skel-catos/.ssh/authorized_keys
         fi
         shaders=$(ls -d /cache/CubismSdkForNative-*/Framework/src/Rendering/OpenGL/Shaders/StandardES 2>/dev/null | sort -V | tail -1)
         if [ -n "$shaders" ]; then
-            mkdir -p $inc/usr/share/meownix
-            cp -r "$shaders" $inc/usr/share/meownix/live2d-shaders
+            mkdir -p $inc/usr/share/catos
+            cp -r "$shaders" $inc/usr/share/catos/live2d-shaders
         fi
 
         lb config
         lb build 2>&1 | tee /out/build-$ARCH.log | grep --line-buffered -E "^(P:|E:|W:)" || true
         iso=$(ls -t /build/*.iso 2>/dev/null | head -1)
         [ -n "$iso" ] || { echo "No ISO produced, see out/build-$ARCH.log"; exit 1; }
-        cp "$iso" /out/meownix-$ARCH.iso
+        cp "$iso" /out/catos-$ARCH.iso
     '
-ls -lh "out/meownix-$arch.iso"
+ls -lh "out/catos-$arch.iso"

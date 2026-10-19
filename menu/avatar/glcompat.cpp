@@ -47,7 +47,7 @@ GLint bound(GLenum which)
 
 extern "C" {
 
-void meownix_glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride,
+void catos_glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride,
                                    const void* pointer)
 {
     if (bound(GL_ARRAY_BUFFER_BINDING) != 0 || index >= MaxAttribs) {
@@ -57,7 +57,7 @@ void meownix_glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLbool
     g_arrays[index] = {pointer, size, type, normalized, stride};
 }
 
-void meownix_glDrawElements(GLenum mode, GLsizei count, GLenum type, const void* indices)
+void catos_glDrawElements(GLenum mode, GLsizei count, GLenum type, const void* indices)
 {
     if (bound(GL_ELEMENT_ARRAY_BUFFER_BINDING) != 0) {
         glDrawElements(mode, count, type, indices);
@@ -97,8 +97,8 @@ void meownix_glDrawElements(GLenum mode, GLsizei count, GLenum type, const void*
 }
 
 /// Core profile needs a vertex array object bound to draw at all. Binds ours
-/// and returns the one that was bound, for meownix_gl_end.
-GLint meownix_gl_begin()
+/// and returns the one that was bound, for catos_gl_end.
+GLint catos_gl_begin()
 {
     if (!g_vao) glGenVertexArrays(1, &g_vao);
     GLint previous = bound(GL_VERTEX_ARRAY_BINDING);
@@ -106,6 +106,6 @@ GLint meownix_gl_begin()
     return previous;
 }
 
-void meownix_gl_end(GLint previous) { glBindVertexArray(previous); }
+void catos_gl_end(GLint previous) { glBindVertexArray(previous); }
 
 } // extern "C"

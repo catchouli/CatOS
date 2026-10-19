@@ -1,4 +1,4 @@
-# Build environment for meownix: a plain Debian trixie with live-build.
+# Build environment for catos: a plain Debian trixie with live-build.
 # Built per target architecture (--platform linux/amd64 or linux/arm64), so the
 # image we produce is native to it.
 FROM debian:trixie

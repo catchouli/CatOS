@@ -1,4 +1,4 @@
-# meownix
+# CatOS
 
 <a href="screenshots/avatar.jpg"><img src="screenshots/avatar-thumb.jpg" width="19%"></a>
 <a href="screenshots/menu.jpg"><img src="screenshots/menu-thumb.jpg" width="19%"></a>
@@ -15,7 +15,7 @@ down to watch something there was a login screen, an update, a popup, or a windo
 that needed a mouse to get rid of. I wanted something that just turns on and lets us
 watch stuff.
 
-So meownix:
+So catos:
 
 - **Boots straight into the menu.** No login screen, no desktop, nothing to click past.
 - **Only has the apps we actually use.** [Flex](https://github.com/catchouli/flex) for
@@ -52,7 +52,7 @@ You'll need Docker. Then:
 ./build.sh
 ```
 
-That builds `out/meownix-amd64.iso`, which you can write to a USB stick and boot
+That builds `out/catos-amd64.iso`, which you can write to a USB stick and boot
 from. Check the disk number with `diskutil list` first (`lsblk` on Linux), because
 this wipes the stick:
 
@@ -60,7 +60,7 @@ this wipes the stick:
 ./flash.sh /dev/diskN
 ```
 
-On its first boot, meownix makes a partition in the stick's spare space for saved
+On its first boot, catos makes a partition in the stick's spare space for saved
 settings (the sound output, the network share login, and so on), and keeps them
 there from then on. `flash.sh` keeps that partition when it writes a new version,
 so updating doesn't lose your settings. (Writing the image with plain `dd` does.)
@@ -111,7 +111,7 @@ The menu draws the model with Live2D's own framework, through a small C++ bridge
 
 ## Credits
 
-meownix is mostly glue around other people's great work:
+catos is mostly glue around other people's great work:
 [Debian](https://www.debian.org/) and
 [live-build](https://salsa.debian.org/live-team/live-build), cage, egui,
 [Firefox](https://www.mozilla.org/firefox/),

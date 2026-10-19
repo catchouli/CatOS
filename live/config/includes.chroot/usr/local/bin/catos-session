@@ -30,12 +30,12 @@ if [ ! -e /dev/dri/renderD128 ]; then
     unset LIBVA_DRIVER_NAME
 fi
 
-mkdir -p "$HOME/.local/state/meownix"
-log="$HOME/.local/state/meownix/session.log"
+mkdir -p "$HOME/.local/state/catos"
+log="$HOME/.local/state/catos/session.log"
 [ -f "$log" ] && mv "$log" "$log.old"
 
 # -d: no client-side decorations, -s: allow VT switching (Ctrl+Alt+F2 for a shell)
-cage -d -s -- /usr/local/bin/meownix-menu >"$log" 2>&1
+cage -d -s -- /usr/local/bin/catos-menu >"$log" 2>&1
 
 # If the session dies, wait a moment before getty logs us back in, so a
 # broken session can't spin the CPU.

@@ -44,7 +44,7 @@ csmByte* load_file(const std::string path, csmSizeInt* size)
     }
     std::ifstream f(full, std::ios::binary | std::ios::ate);
     if (!f) {
-        std::fprintf(stderr, "meownix-menu: avatar: can't read %s\n", full.c_str());
+        std::fprintf(stderr, "catos-menu: avatar: can't read %s\n", full.c_str());
         *size = 0;
         return nullptr;
     }
@@ -57,7 +57,7 @@ csmByte* load_file(const std::string path, csmSizeInt* size)
 
 void release_file(csmByte* bytes) { std::free(bytes); }
 
-void log_message(const char* msg) { std::fprintf(stderr, "meownix-menu: live2d: %s", msg); }
+void log_message(const char* msg) { std::fprintf(stderr, "catos-menu: live2d: %s", msg); }
 
 class Allocator : public ICubismAllocator {
     void* Allocate(const csmSizeType size) override { return std::malloc(size); }
@@ -227,7 +227,7 @@ extern "C" {
 
 /// Starts the framework and loads the model's files (no GL needed yet).
 /// Returns null if the model can't be loaded.
-void* meownix_avatar_load(const char* model_json, const char* shader_dir)
+void* catos_avatar_load(const char* model_json, const char* shader_dir)
 {
     if (!CubismFramework::IsStarted()) {
         g_shader_dir = shader_dir;
@@ -246,19 +246,19 @@ void* meownix_avatar_load(const char* model_json, const char* shader_dir)
     return a;
 }
 
-int meownix_avatar_texture_count(void* a) { return static_cast<Avatar*>(a)->TextureCount(); }
+int catos_avatar_texture_count(void* a) { return static_cast<Avatar*>(a)->TextureCount(); }
 
 /// Writes texture `i`'s file path into `buf` (NUL-terminated, truncated to `len`).
-void meownix_avatar_texture_path(void* a, int i, char* buf, int len)
+void catos_avatar_texture_path(void* a, int i, char* buf, int len)
 {
     std::snprintf(buf, len, "%s", static_cast<Avatar*>(a)->TexturePath(i).c_str());
 }
 
-float meownix_avatar_aspect(void* a) { return static_cast<Avatar*>(a)->Aspect(); }
+float catos_avatar_aspect(void* a) { return static_cast<Avatar*>(a)->Aspect(); }
 
 /// Creates the GL renderer and binds the textures the menu uploaded. Call with
 /// the menu's GL context current.
-void meownix_avatar_init_gl(void* a, const unsigned* textures, int count, int width, int height)
+void catos_avatar_init_gl(void* a, const unsigned* textures, int count, int width, int height)
 {
     auto* av = static_cast<Avatar*>(a);
     av->CreateRenderer(width, height);
@@ -268,14 +268,14 @@ void meownix_avatar_init_gl(void* a, const unsigned* textures, int count, int wi
 }
 
 /// Advances the animation. `look_x`/`look_y` (-1..1, +y up) is where she looks.
-void meownix_avatar_update(void* a, float dt, float look_x, float look_y)
+void catos_avatar_update(void* a, float dt, float look_x, float look_y)
 {
     static_cast<Avatar*>(a)->Update(dt, look_x, look_y);
 }
 
 /// Draws her with the model's centre at (`x`, `y`) in clip space, `height` tall
 /// (also in clip space), into a `width_px` x `height_px` framebuffer.
-void meownix_avatar_draw(void* a, float x, float y, float height, int width_px, int height_px)
+void catos_avatar_draw(void* a, float x, float y, float height, int width_px, int height_px)
 {
     auto* av = static_cast<Avatar*>(a);
     av->SetRenderTargetSize(width_px, height_px);
@@ -285,14 +285,14 @@ void meownix_avatar_draw(void* a, float x, float y, float height, int width_px, 
     projection.Scale(height / 2.0f * height_px / width_px, height / 2.0f);
     projection.Translate(x, y);
 
-    const GLint vao = meownix_gl_begin();
+    const GLint vao = catos_gl_begin();
     CubismOffscreenManager_OpenGLES2::GetInstance()->BeginFrameProcess();
     av->Draw(projection);
     CubismOffscreenManager_OpenGLES2::GetInstance()->EndFrameProcess();
     CubismOffscreenManager_OpenGLES2::GetInstance()->ReleaseStaleRenderTextures();
-    meownix_gl_end(vao);
+    catos_gl_end(vao);
 }
 
-void meownix_avatar_free(void* a) { delete static_cast<Avatar*>(a); }
+void catos_avatar_free(void* a) { delete static_cast<Avatar*>(a); }
 
 } // extern "C"

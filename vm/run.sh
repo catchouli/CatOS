@@ -1,13 +1,13 @@
 #!/bin/sh
-# Boots a meownix ISO in a VM with UEFI, like the real box.
+# Boots a catos ISO in a VM with UEFI, like the real box.
 #
 #   vm/run.sh [arm64|amd64] [window|headless]
 #
-#   arm64      out/meownix-arm64.iso with Apple's Virtualization framework (via vfkit):
+#   arm64      out/catos-arm64.iso with Apple's Virtualization framework (via vfkit):
 #              near-native speed on Apple Silicon. The default on an ARM Mac; use it
 #              for testing. Always opens a window (Ctrl+Cmd+F for full screen);
 #              quit vfkit to stop it. 1280x720: the guest draws in software.
-#   amd64      out/meownix-amd64.iso, the image for the real box. x86 is emulated
+#   amd64      out/catos-amd64.iso, the image for the real box. x86 is emulated
 #              on an ARM Mac, so it's very slow: only for checking that it boots.
 #
 #   (default)  full screen, scaled to fit (Ctrl+Opt+F leaves full screen,
@@ -21,7 +21,7 @@ arch=amd64
 [ "$(uname -m)" = arm64 ] && arch=arm64
 case "${1:-}" in amd64|arm64) arch=$1; shift ;; esac
 
-iso="out/meownix-$arch.iso"
+iso="out/catos-$arch.iso"
 [ -f "$iso" ] || { echo "No $iso yet: run ./build.sh $arch"; exit 1; }
 share="$(brew --prefix qemu)/share/qemu"
 state=out/vm

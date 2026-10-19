@@ -1,16 +1,16 @@
 #!/bin/sh
-# Mounts the network shares listed in /etc/meownix/shares at /media/<last part
+# Mounts the network shares listed in /etc/catos/shares at /media/<last part
 # of the path>, the first time something opens them. One share per line,
 # read-only unless it's followed by "rw":
 #   //server/movies
 #   //server/cache/flex rw
-# Logs in with /etc/meownix/smb-credentials if it's there (see smbmount(8):
+# Logs in with /etc/catos/smb-credentials if it's there (see smbmount(8):
 # username=, password=, domain=), or as a guest if not.
 # Systemd runs this at boot and on `systemctl daemon-reload`.
 set -eu
 out=$1
-conf=/etc/meownix/shares
-creds=/etc/meownix/smb-credentials
+conf=/etc/catos/shares
+creds=/etc/catos/smb-credentials
 [ -f "$conf" ] || exit 0
 
 if [ -f "$creds" ]; then login="credentials=$creds"; else login=guest; fi

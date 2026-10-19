@@ -57,9 +57,9 @@ grim
 # "recommends" it, and the image skips recommends).
 network-manager
 wpasupplicant
-# Network shares (see /etc/meownix/shares)
+# Network shares (see /etc/catos/shares)
 cifs-utils
-# Saved settings on the USB stick (meownix-persistence)
+# Saved settings on the USB stick (catos-persistence)
 fdisk
 e2fsprogs
 # Remote login for testing, by key only (see build.sh: cache/ssh/authorized_keys)
@@ -78,7 +78,7 @@ fonts-inter
 fonts-dejavu-core
 fonts-noto-color-emoji
 
-# Libraries the crossbar menu (meownix-menu, Rust/egui) loads at runtime
+# Libraries the crossbar menu (catos-menu, Rust/egui) loads at runtime
 libegl1
 # OpenGL without GLX, for the Live2D avatar
 libopengl0

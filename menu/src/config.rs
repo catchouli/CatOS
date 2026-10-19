@@ -91,8 +91,8 @@ pub fn load(explicit: Option<PathBuf>) -> Result<Config, String> {
     let candidates: Vec<PathBuf> = match explicit {
         Some(p) => vec![p],
         None => vec![
-            std::env::home_dir().unwrap_or_default().join(".config/meownix/menu.toml"),
-            Path::new("/etc/meownix/menu.toml").to_path_buf(),
+            std::env::home_dir().unwrap_or_default().join(".config/catos/menu.toml"),
+            Path::new("/etc/catos/menu.toml").to_path_buf(),
         ],
     };
     for p in &candidates {

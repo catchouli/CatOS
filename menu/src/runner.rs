@@ -27,20 +27,20 @@ impl Runner {
         let mut cur = self.current.lock().unwrap();
         if let Some(r) = cur.as_mut() {
             if !matches!(r.child.try_wait(), Ok(None)) {
-                eprintln!("meownix-menu: {} exited", r.name);
+                eprintln!("catos-menu: {} exited", r.name);
                 *cur = None;
             }
         }
         cur.as_ref().map(|r| (r.name.clone(), r.started))
     }
 
-    /// Runs `command`. `{scale}` in its arguments, and $MEOWNIX_SCALE in its
+    /// Runs `command`. `{scale}` in its arguments, and $CATOS_SCALE in its
     /// environment, give the zoom factor the app should use.
     pub fn launch(&self, name: &str, command: &[String], scale: f32) -> bool {
         if self.running().is_some() || command.is_empty() {
             return false;
         }
-        eprintln!("meownix-menu: launching {name}: {command:?}");
+        eprintln!("catos-menu: launching {name}: {command:?}");
         let mut cmd = if self.dry_run {
             let mut c = Command::new("sleep");
             c.arg("3");
@@ -49,7 +49,7 @@ impl Runner {
             let scale = format!("{scale:.2}");
             let mut c = Command::new(&command[0]);
             c.args(command[1..].iter().map(|a| a.replace("{scale}", &scale)));
-            c.env("MEOWNIX_SCALE", &scale);
+            c.env("CATOS_SCALE", &scale);
             c
         };
         // Own process group, so closing the app also closes its helpers
@@ -65,7 +65,7 @@ impl Runner {
                 true
             }
             Err(e) => {
-                eprintln!("meownix-menu: failed to launch {name}: {e}");
+                eprintln!("catos-menu: failed to launch {name}: {e}");
                 false
             }
         }
@@ -76,7 +76,7 @@ impl Runner {
     pub fn close(&self) {
         let pid = match self.current.lock().unwrap().as_ref() {
             Some(r) => {
-                eprintln!("meownix-menu: closing {}", r.name);
+                eprintln!("catos-menu: closing {}", r.name);
                 r.child.id() as libc::pid_t
             }
             None => return,
@@ -90,7 +90,7 @@ impl Runner {
                 Some((id, Ok(None))) if id as libc::pid_t == pid
             );
             if still_there {
-                eprintln!("meownix-menu: killing process group {pid}");
+                eprintln!("catos-menu: killing process group {pid}");
                 unsafe { libc::killpg(pid, libc::SIGKILL) };
             }
         });

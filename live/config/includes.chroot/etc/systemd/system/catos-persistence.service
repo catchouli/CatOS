@@ -5,7 +5,7 @@ After=local-fs.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/meownix-persistence
+ExecStart=/usr/local/sbin/catos-persistence
 
 [Install]
 WantedBy=multi-user.target

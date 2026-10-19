@@ -21,7 +21,7 @@ pub fn spawn(controls: &Controls, on_home: impl Fn() + Send + Sync + 'static) {
             .filter_map(|n| match KeyCode::from_str(n) {
                 Ok(k) => Some(k),
                 Err(_) => {
-                    eprintln!("meownix-menu: unknown key name {n:?} in config");
+                    eprintln!("catos-menu: unknown key name {n:?} in config");
                     None
                 }
             })
@@ -48,7 +48,7 @@ pub fn spawn(controls: &Controls, on_home: impl Fn() + Send + Sync + 'static) {
                     if !relevant {
                         continue;
                     }
-                    eprintln!("meownix-menu: watching {} ({})", dev.name().unwrap_or("?"), path.display());
+                    eprintln!("catos-menu: watching {} ({})", dev.name().unwrap_or("?"), path.display());
                     watching.lock().unwrap().insert(path.clone());
                     let (home, hold, held, watching, on_home) =
                         (home.clone(), hold.clone(), held.clone(), watching.clone(), on_home.clone());

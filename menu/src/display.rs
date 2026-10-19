@@ -91,7 +91,7 @@ fn set(output: &str, mode: Option<&Mode>) -> bool {
     };
     let ok = cmd.status().is_ok_and(|s| s.success());
     if !ok {
-        eprintln!("meownix-menu: couldn't set {output} to {}", mode.map_or("its preferred mode".into(), Mode::arg));
+        eprintln!("catos-menu: couldn't set {output} to {}", mode.map_or("its preferred mode".into(), Mode::arg));
     }
     ok
 }
@@ -99,7 +99,7 @@ fn set(output: &str, mode: Option<&Mode>) -> bool {
 /// Where a mode picked in Settings is kept (in /home, so on the stick's
 /// settings partition): "auto", or a wlr-randr mode like "3840x2160@60.000Hz".
 fn saved_path() -> PathBuf {
-    std::env::home_dir().unwrap_or_default().join(".local/state/meownix/screen-mode")
+    std::env::home_dir().unwrap_or_default().join(".local/state/catos/screen-mode")
 }
 
 /// Sets every screen to the mode picked in Settings, or else `default` (from
@@ -114,7 +114,7 @@ pub fn set_startup_mode(default: &str) {
     for output in outputs() {
         let status = Command::new("wlr-randr").args(["--output", &output.name, "--mode", mode]).status();
         if !status.is_ok_and(|s| s.success()) {
-            eprintln!("meownix-menu: couldn't set {} to {mode}", output.name);
+            eprintln!("catos-menu: couldn't set {} to {mode}", output.name);
         }
     }
 }
@@ -198,7 +198,7 @@ impl Menu {
                         let path = saved_path();
                         let _ = std::fs::create_dir_all(path.parent().unwrap());
                         if let Err(e) = std::fs::write(&path, format!("{saved}\n")) {
-                            eprintln!("meownix-menu: couldn't save the screen mode: {e}");
+                            eprintln!("catos-menu: couldn't save the screen mode: {e}");
                         }
                         "Kept".to_owned()
                     } else {

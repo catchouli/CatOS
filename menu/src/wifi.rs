@@ -163,7 +163,7 @@ fn run_nmcli(args: &[&str]) -> Result<(), String> {
         return Ok(());
     }
     let err = String::from_utf8_lossy(&out.stderr);
-    eprintln!("meownix-menu: nmcli {}: {}", args.first().unwrap_or(&""), err.trim());
+    eprintln!("catos-menu: nmcli {}: {}", args.first().unwrap_or(&""), err.trim());
     Err(err.trim().trim_start_matches("Error: ").to_owned())
 }
 

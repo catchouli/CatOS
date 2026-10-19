@@ -1,5 +1,5 @@
 #!/bin/sh
-# live-build configuration for meownix. `lb config` calls this automatically.
+# live-build configuration for catos. `lb config` calls this automatically.
 # ARCH is amd64 (the real box) or arm64 (fast VMs on Apple Silicon).
 set -e
 
@@ -23,7 +23,7 @@ lb config noauto \
   --memtest none \
   --security true \
   --updates true \
-  --iso-application "meownix" \
-  --iso-volume "MEOWNIX" \
-  --bootappend-live "boot=live components persistence quiet loglevel=3 vt.global_cursor_default=0 hostname=meownix username=tv live-config.noautologin timezone=Europe/London locales=en_GB.UTF-8" \
+  --iso-application "catos" \
+  --iso-volume "CATOS" \
+  --bootappend-live "boot=live components persistence quiet loglevel=3 vt.global_cursor_default=0 hostname=catos username=tv live-config.noautologin timezone=Europe/London locales=en_GB.UTF-8" \
   "${@}"

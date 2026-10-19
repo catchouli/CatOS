@@ -1,5 +1,5 @@
-# meownix menu. Installed as /etc/meownix/menu.toml; a copy in
-# ~/.config/meownix/menu.toml overrides it.
+# catos menu. Installed as /etc/catos/menu.toml; a copy in
+# ~/.config/catos/menu.toml overrides it.
 #
 # Icons: tv, gear, sliders, speaker, play, youtube, film, power, restart, network
 
@@ -27,7 +27,7 @@ mode = "1920x1080"
 # A Live2D model to show beside the menu: its .model3.json, or a folder with
 # one in it. build.sh puts cache/avatar/ here. Needs a build with Live2D's SDK
 # (see build.sh); otherwise, or if there's no model, there's no avatar.
-model = "/usr/share/meownix/avatar"
+model = "/usr/share/catos/avatar"
 
 [[category]]
 name = "Watch"
@@ -43,20 +43,20 @@ icon = "tv"
   name = "Flex (web)"
   icon = "film"
   description = "Flex on another PC, in the browser"
-  command = ["meownix-browser", "flex", "http://192.168.1.110:8484"]
+  command = ["catos-browser", "flex", "http://192.168.1.110:8484"]
 
   [[category.item]]
   name = "FreeTube"
   icon = "play"
   description = "YouTube without the ads or tracking"
-  command = ["meownix-freetube"]
+  command = ["catos-freetube"]
 
   [[category.item]]
   name = "YouTube"
   icon = "youtube"
   description = "YouTube's TV interface in Firefox"
   command = [
-    "meownix-browser", "youtube", "https://www.youtube.com/tv",
+    "catos-browser", "youtube", "https://www.youtube.com/tv",
     # Pretend to be a Samsung TV so YouTube serves its TV interface.
     "Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.5) AppleWebKit/537.36 (KHTML, like Gecko) 85.0.4183.93/6.5 TV Safari/537.36",
   ]

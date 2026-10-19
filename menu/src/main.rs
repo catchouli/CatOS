@@ -1,4 +1,4 @@
-//! meownix crossbar menu.
+//! catos crossbar menu.
 //!
 //! A crossbar launcher: categories run left/right, the items in the
 //! selected category run up/down. OK (Enter) launches an item fullscreen; holding
@@ -239,7 +239,7 @@ impl Menu {
                 }
                 self.confirm = None;
                 self.toast = Some((format!("{name}…"), now + Duration::from_secs(30)));
-                eprintln!("meownix-menu: systemctl {a}");
+                eprintln!("catos-menu: systemctl {a}");
                 if !self.dry_run {
                     let _ = std::process::Command::new("systemctl").arg(a).spawn();
                 }
@@ -545,17 +545,17 @@ fn main() -> eframe::Result {
             "--dry-run" => dry_run = true,
             "--config" => config_path = args.next().map(PathBuf::from),
             _ => {
-                eprintln!("usage: meownix-menu [--windowed] [--dry-run] [--config FILE]");
+                eprintln!("usage: catos-menu [--windowed] [--dry-run] [--config FILE]");
                 std::process::exit(2);
             }
         }
     }
     let cfg = config::load(config_path).unwrap_or_else(|e| {
-        eprintln!("meownix-menu: {e}");
+        eprintln!("catos-menu: {e}");
         std::process::exit(1);
     });
 
-    let viewport = egui::ViewportBuilder::default().with_title("meownix").with_app_id("meownix");
+    let viewport = egui::ViewportBuilder::default().with_title("catos").with_app_id("catos");
     let viewport = if windowed {
         viewport.with_inner_size([1280.0, 720.0]).with_position([80.0, 80.0])
     } else {
@@ -569,7 +569,7 @@ fn main() -> eframe::Result {
 
     let runner = Runner::new(dry_run);
     eframe::run_native(
-        "meownix",
+        "catos",
         options,
         Box::new(move |cc| {
             setup_fonts(&cc.egui_ctx);

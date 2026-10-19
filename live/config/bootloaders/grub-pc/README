@@ -1,5 +1,5 @@
 These GRUB templates are copied from Debian's live-build
 (/usr/share/live/build/bootloaders/grub-pc), which is GPL-3.0-or-later.
 
-Changes for meownix, in config.cfg: boot after 1 second with the menu hidden
+Changes for catos, in config.cfg: boot after 1 second with the menu hidden
 (hold Esc to see it), and no startup beep.

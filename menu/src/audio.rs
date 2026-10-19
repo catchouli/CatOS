@@ -84,7 +84,7 @@ pub fn select(output: &Output) {
             }
             std::thread::sleep(Duration::from_millis(150));
         }
-        eprintln!("meownix-menu: no sound output appeared for card {device} profile {profile}");
+        eprintln!("catos-menu: no sound output appeared for card {device} profile {profile}");
     });
 }
 
@@ -122,7 +122,7 @@ fn default_sink_device(objects: &[Value]) -> Option<u64> {
 fn run(program: &str, args: &[&str]) {
     match Command::new(program).args(args).status() {
         Ok(s) if s.success() => {}
-        other => eprintln!("meownix-menu: {program} {args:?} failed: {other:?}"),
+        other => eprintln!("catos-menu: {program} {args:?} failed: {other:?}"),
     }
 }
 

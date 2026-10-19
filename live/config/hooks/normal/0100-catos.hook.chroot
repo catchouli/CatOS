@@ -13,13 +13,13 @@ echo 'Europe/London' > /etc/timezone
 if ! id tv >/dev/null 2>&1; then
     useradd --create-home --shell /bin/bash --user-group \
             --groups audio,video,render,input,netdev,sudo tv
-    # No password for now. SSH only takes keys (see sshd_config.d/meownix.conf);
+    # No password for now. SSH only takes keys (see sshd_config.d/catos.conf);
     # set one before installing to disk.
     passwd -d tv
 fi
-cp -rT /etc/skel-meownix /home/tv
+cp -rT /etc/skel-catos /home/tv
 chown -R tv:tv /home/tv
-rm -rf /etc/skel-meownix
+rm -rf /etc/skel-catos
 
-systemctl enable NetworkManager systemd-timesyncd meownix-persistence
+systemctl enable NetworkManager systemd-timesyncd catos-persistence
 systemctl set-default multi-user.target

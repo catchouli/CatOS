@@ -1,5 +1,5 @@
 #!/bin/sh
-# Gives a meownix USB stick somewhere to keep settings. On a boot from a stick
+# Gives a catos USB stick somewhere to keep settings. On a boot from a stick
 # that hasn't got one yet, adds a partition labelled "persistence" in the free
 # space after the image. live-boot (booted with "persistence") keeps the folders
 # listed in its persistence.conf there from the next boot on.
@@ -11,20 +11,20 @@
 # entry back.
 set -eu
 
-log() { echo "meownix-persistence: $*"; }
+log() { echo "catos-persistence: $*"; }
 
 # What to keep. /home: the tv user's settings (sound output, Flex's library,
-# ...). /etc/meownix: menu.toml and the network share login.
+# ...). /etc/catos: menu.toml and the network share login.
 # /etc/NetworkManager/system-connections: Wi-Fi networks joined, and their passwords.
 # /etc/ssh: the box's SSH host keys, made on its first boot (otherwise they're
 # new every boot, and SSH warns that the box has changed).
 KEEP="/home union
-/etc/meownix union
+/etc/catos union
 /etc/NetworkManager/system-connections union
 /etc/ssh union"
 
 # Already have a partition: make sure it keeps everything in $KEEP (a stick
-# set up by an older meownix may not), from the next boot.
+# set up by an older catos may not), from the next boot.
 existing=$(findmnt -n -o TARGET -S LABEL=persistence 2>/dev/null | head -1 || true)
 if [ -n "$existing" ]; then
     echo "$KEEP" | while read -r line; do
@@ -48,9 +48,9 @@ else
     disk=/dev/$(lsblk -n -o PKNAME "$medium" | head -1)
 fi
 
-# Only ever a USB stick, never a computer's own disk. (meownix.persistence=any
+# Only ever a USB stick, never a computer's own disk. (catos.persistence=any
 # on the boot line allows any disk, for testing in a VM.)
-if [ "$(lsblk -n -d -o TRAN "$disk")" != usb ] && ! grep -qw meownix.persistence=any /proc/cmdline; then
+if [ "$(lsblk -n -d -o TRAN "$disk")" != usb ] && ! grep -qw catos.persistence=any /proc/cmdline; then
     log "$disk isn't a USB stick, leaving it alone"
     exit 0
 fi

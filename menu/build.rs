@@ -1,5 +1,5 @@
 //! Builds the Live2D avatar bridge (avatar/avatar.cpp) when Live2D's Cubism SDK
-//! for Native is available: set MEOWNIX_CUBISM_SDK to the unpacked
+//! for Native is available: set CATOS_CUBISM_SDK to the unpacked
 //! CubismSdkForNative-* folder. Without it the menu builds as before, with no avatar.
 //!
 //! The SDK can't go in this repo (Cubism Core is proprietary), so build.sh
@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 
 fn main() {
     println!("cargo::rustc-check-cfg=cfg(avatar)");
-    println!("cargo::rerun-if-env-changed=MEOWNIX_CUBISM_SDK");
+    println!("cargo::rerun-if-env-changed=CATOS_CUBISM_SDK");
     println!("cargo::rerun-if-changed=avatar");
-    let Some(sdk) = std::env::var_os("MEOWNIX_CUBISM_SDK").map(PathBuf::from) else {
+    let Some(sdk) = std::env::var_os("CATOS_CUBISM_SDK").map(PathBuf::from) else {
         return;
     };
     if std::env::var("CARGO_CFG_TARGET_OS").unwrap() != "linux" {
@@ -30,7 +30,7 @@ fn main() {
         .unwrap_or_else(|| sdk.join("Core/lib/linux").join(arch));
     let framework = sdk.join("Framework/src");
     for p in [&core_lib, &framework] {
-        assert!(p.is_dir(), "{} not found: is MEOWNIX_CUBISM_SDK the unpacked SDK folder?", p.display());
+        assert!(p.is_dir(), "{} not found: is CATOS_CUBISM_SDK the unpacked SDK folder?", p.display());
     }
 
     let mut build = cc::Build::new();
@@ -47,7 +47,7 @@ fn main() {
         .file("avatar/avatar.cpp")
         .file("avatar/glcompat.cpp");
     add_sources(&mut build, &framework);
-    build.compile("meownix_avatar");
+    build.compile("catos_avatar");
 
     // After the bridge, so the linker can resolve the framework's calls into Core.
     println!("cargo::rustc-link-search=native={}", core_lib.display());

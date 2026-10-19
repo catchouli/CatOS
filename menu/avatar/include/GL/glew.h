@@ -8,11 +8,11 @@
 #include <GL/glext.h>
 
 extern "C" {
-void meownix_glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride,
+void catos_glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride,
                                    const void* pointer);
-void meownix_glDrawElements(GLenum mode, GLsizei count, GLenum type, const void* indices);
-GLint meownix_gl_begin();
-void meownix_gl_end(GLint previous);
+void catos_glDrawElements(GLenum mode, GLsizei count, GLenum type, const void* indices);
+GLint catos_gl_begin();
+void catos_gl_end(GLint previous);
 }
-#define glVertexAttribPointer meownix_glVertexAttribPointer
-#define glDrawElements meownix_glDrawElements
+#define glVertexAttribPointer catos_glVertexAttribPointer
+#define glDrawElements catos_glDrawElements

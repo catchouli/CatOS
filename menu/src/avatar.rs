@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 use eframe::egui::{self, Painter, Pos2, Rect};
 
 /// Where the shaders for Live2D's OpenGL renderer are installed.
-pub const SHADER_DIR: &str = "/usr/share/meownix/live2d-shaders";
+pub const SHADER_DIR: &str = "/usr/share/catos/live2d-shaders";
 
 /// Her height, as a fraction of the screen's, and where her middle sits.
 const HEIGHT: f32 = 0.95;
@@ -27,13 +27,13 @@ mod ffi {
     use std::ffi::{c_char, c_float, c_int, c_uint, c_void};
 
     unsafe extern "C" {
-        pub fn meownix_avatar_load(model_json: *const c_char, shader_dir: *const c_char) -> *mut c_void;
-        pub fn meownix_avatar_texture_count(a: *mut c_void) -> c_int;
-        pub fn meownix_avatar_texture_path(a: *mut c_void, i: c_int, buf: *mut c_char, len: c_int);
-        pub fn meownix_avatar_init_gl(a: *mut c_void, textures: *const c_uint, count: c_int, w: c_int, h: c_int);
-        pub fn meownix_avatar_update(a: *mut c_void, dt: c_float, look_x: c_float, look_y: c_float);
-        pub fn meownix_avatar_draw(a: *mut c_void, x: c_float, y: c_float, height: c_float, w: c_int, h: c_int);
-        pub fn meownix_avatar_free(a: *mut c_void);
+        pub fn catos_avatar_load(model_json: *const c_char, shader_dir: *const c_char) -> *mut c_void;
+        pub fn catos_avatar_texture_count(a: *mut c_void) -> c_int;
+        pub fn catos_avatar_texture_path(a: *mut c_void, i: c_int, buf: *mut c_char, len: c_int);
+        pub fn catos_avatar_init_gl(a: *mut c_void, textures: *const c_uint, count: c_int, w: c_int, h: c_int);
+        pub fn catos_avatar_update(a: *mut c_void, dt: c_float, look_x: c_float, look_y: c_float);
+        pub fn catos_avatar_draw(a: *mut c_void, x: c_float, y: c_float, height: c_float, w: c_int, h: c_int);
+        pub fn catos_avatar_free(a: *mut c_void);
     }
 }
 
@@ -57,7 +57,7 @@ unsafe impl Send for Inner {}
 #[cfg(avatar)]
 impl Drop for Inner {
     fn drop(&mut self) {
-        unsafe { ffi::meownix_avatar_free(self.model) };
+        unsafe { ffi::catos_avatar_free(self.model) };
     }
 }
 
@@ -87,17 +87,17 @@ impl Avatar {
         let model_json = model_json.as_path();
         let path = CString::new(model_json.as_os_str().as_encoded_bytes()).ok()?;
         let shaders = CString::new(SHADER_DIR).unwrap();
-        let model = unsafe { ffi::meownix_avatar_load(path.as_ptr(), shaders.as_ptr()) };
+        let model = unsafe { ffi::catos_avatar_load(path.as_ptr(), shaders.as_ptr()) };
         if model.is_null() {
-            eprintln!("meownix-menu: couldn't load the avatar from {}", model_json.display());
+            eprintln!("catos-menu: couldn't load the avatar from {}", model_json.display());
             return None;
         }
-        let n = unsafe { ffi::meownix_avatar_texture_count(model) };
+        let n = unsafe { ffi::catos_avatar_texture_count(model) };
         let texture_paths = (0..n)
             .map(|i| {
                 let mut buf = [0 as std::ffi::c_char; 4096];
                 unsafe {
-                    ffi::meownix_avatar_texture_path(model, i, buf.as_mut_ptr(), buf.len() as _);
+                    ffi::catos_avatar_texture_path(model, i, buf.as_mut_ptr(), buf.len() as _);
                     CStr::from_ptr(buf.as_ptr()).to_string_lossy().into_owned().into()
                 }
             })
@@ -110,7 +110,7 @@ impl Avatar {
     pub fn load(path: &Path) -> Option<Self> {
         if let Some(model_json) = find_model(path) {
             eprintln!(
-                "meownix-menu: this build has no Live2D support, so the avatar ({}) is off",
+                "catos-menu: this build has no Live2D support, so the avatar ({}) is off",
                 model_json.display()
             );
         }
@@ -126,7 +126,7 @@ impl Avatar {
             let look_x = ((target.x - face.x) / (screen.width() * 0.4)).clamp(-1.0, 1.0);
             let look_y = (-(target.y - face.y) / (screen.height() * 0.4)).clamp(-1.0, 1.0);
             let inner = self.inner.lock().unwrap();
-            unsafe { ffi::meownix_avatar_update(inner.model, dt, look_x, look_y) };
+            unsafe { ffi::catos_avatar_update(inner.model, dt, look_x, look_y) };
         }
     }
 
@@ -154,7 +154,7 @@ impl Inner {
             if !self.gl_ready {
                 self.gl_ready = true;
                 let textures: Vec<u32> = self.texture_paths.iter().map(|p| upload_texture(gl, p)).collect();
-                ffi::meownix_avatar_init_gl(self.model, textures.as_ptr(), textures.len() as _, w, h);
+                ffi::catos_avatar_init_gl(self.model, textures.as_ptr(), textures.len() as _, w, h);
             }
             // egui leaves its scissor on, which would also clip the masks
             // Live2D draws offscreen.
@@ -162,7 +162,7 @@ impl Inner {
             gl.disable(glow::SCISSOR_TEST);
             // Clip space is -1..1 with +y up.
             let (x, y) = (CENTRE_X * 2.0 - 1.0, 1.0 - CENTRE_Y * 2.0);
-            ffi::meownix_avatar_draw(self.model, x, y, HEIGHT * 2.0, w, h);
+            ffi::catos_avatar_draw(self.model, x, y, HEIGHT * 2.0, w, h);
         }
     }
 }
@@ -175,7 +175,7 @@ unsafe fn upload_texture(gl: &eframe::glow::Context, path: &Path) -> u32 {
     let rgba = match decode_png(path) {
         Ok(img) => img,
         Err(e) => {
-            eprintln!("meownix-menu: avatar texture {}: {e}", path.display());
+            eprintln!("catos-menu: avatar texture {}: {e}", path.display());
             return 0;
         }
     };

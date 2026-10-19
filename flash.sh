@@ -1,9 +1,9 @@
 #!/bin/sh
-# Writes out/meownix-amd64.iso to a USB stick, keeping its saved settings.
+# Writes out/catos-amd64.iso to a USB stick, keeping its saved settings.
 #
 #   ./flash.sh /dev/diskN [image.iso]     (Linux: /dev/sdX)
 #
-# The settings live in a partition after the image (see meownix-persistence).
+# The settings live in a partition after the image (see catos-persistence).
 # Writing an image replaces the stick's partition table, so this copies that
 # partition's entry first and puts it back afterwards. Its data is never touched,
 # as long as the new image ends before it starts.
@@ -11,7 +11,7 @@ set -eu
 cd "$(dirname "$0")"
 
 disk=${1:?usage: ./flash.sh /dev/diskN [image.iso]}
-iso=${2:-out/meownix-amd64.iso}
+iso=${2:-out/catos-amd64.iso}
 [ -f "$iso" ] || { echo "No $iso: run ./build.sh"; exit 1; }
 
 case $(uname) in
@@ -55,7 +55,7 @@ if [ "$type" = 83 ] && [ "$start" -gt 0 ]; then
         echo "The image is now too big to fit before the saved settings, which will be lost."
     fi
 else
-    echo "No saved settings on this stick yet; meownix makes them on its first boot."
+    echo "No saved settings on this stick yet; catos makes them on its first boot."
 fi
 
 printf 'Write %s to %s (%s)? Everything else on it is erased. [y/N] ' "$iso" "$disk" "$name"
