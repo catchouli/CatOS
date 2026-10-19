@@ -62,6 +62,9 @@ cifs-utils
 # Saved settings on the USB stick (catos-persistence)
 fdisk
 e2fsprogs
+# Installing to a drive (catos-install): the EFI partition and its boot entry
+dosfstools
+efibootmgr
 # Remote login for testing, by key only (see build.sh: cache/ssh/authorized_keys)
 openssh-server
 

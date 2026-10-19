@@ -63,7 +63,21 @@ this wipes the stick:
 On its first boot, catos makes a partition in the stick's spare space for saved
 settings (the sound output, the network share login, and so on), and keeps them
 there from then on. `flash.sh` keeps that partition when it writes a new version,
-so updating doesn't lose your settings. (Writing the image with plain `dd` does.)
+so updating doesn't lose your settings. (Writing the image with plain `dd` loses
+the partition's place in the table, but the next boot finds the settings and puts
+it back.)
+
+### Installing it on the PC's own drive
+
+Once it's running from the stick, **System → Install to drive** puts it on the
+PC's drive instead. It shows what's on the drive, and you hold OK to erase it all
+(Windows included). The drive gets three partitions: the boot files, the system
+(16 GB) and your data (the rest), and the stick's saved settings are copied over.
+Take the stick out and restart, and it starts from the drive.
+
+To update it, start from a stick with the new version and pick **Update CatOS on
+…** in the same place. That only replaces the system partition, so your settings,
+logins and anything else in your home folder stay.
 
 A few extras are picked up from `cache/` if they're there, and kept out of the repo:
 

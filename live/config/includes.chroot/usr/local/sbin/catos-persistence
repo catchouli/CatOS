@@ -23,9 +23,17 @@ KEEP="/home union
 /etc/NetworkManager/system-connections union
 /etc/ssh union"
 
-# Already have a partition: make sure it keeps everything in $KEEP (a stick
-# set up by an older catos may not), from the next boot.
+# catos-install writes the same list for a drive's data partition.
+if [ "${1:-}" = --keep-list ]; then
+    echo "$KEEP"
+    exit 0
+fi
+
+# Already have a partition (the stick's, or "catos-data" on a drive CatOS is
+# installed on): make sure it keeps everything in $KEEP (one set up by an older
+# catos may not), from the next boot.
 existing=$(findmnt -n -o TARGET -S LABEL=persistence 2>/dev/null | head -1 || true)
+[ -n "$existing" ] || existing=$(findmnt -n -o TARGET -S LABEL=catos-data 2>/dev/null | head -1 || true)
 if [ -n "$existing" ]; then
     echo "$KEEP" | while read -r line; do
         grep -qxF "$line" "$existing/persistence.conf" 2>/dev/null || {

@@ -1,0 +1,280 @@
+#!/bin/sh
+# Installs CatOS from the USB stick it's running from to a computer's own
+# drive, or updates a drive it's installed on. The menu runs this (Settings →
+# Install to drive); it can be run by hand too:
+#
+#   catos-install list            drives it could install to, as JSON
+#   catos-install install DISK    erase DISK and install CatOS on it
+#   catos-install update          put this stick's CatOS on the installed drive
+#
+# An installed drive has three partitions:
+#
+#   1  EFI           512 MiB  FAT32, the boot files: shim and GRUB from the stick
+#   2  catos-system   16 GiB  ext4, /live (kernel, initrd, squashfs) and GRUB's menu
+#   3  catos-data    the rest ext4, the saved settings (like the stick's
+#                             "persistence" partition, see catos-persistence)
+#
+# It boots the same live system as the stick, told which partitions are its
+# own (live-media= and persistence-label=), so a stick that's plugged in too
+# is never used by mistake. An update only replaces the files on catos-system.
+#
+# It prints a line for each step, "error: ..." if it fails (and exits 1), and
+# "done" at the end.
+set -eu
+
+SYSTEM_SIZE=16GiB
+MIN_DISK_GIB=32
+medium=/run/live/medium
+
+say() { echo "$*"; }
+fail() { echo "error: $*"; exit 1; }
+
+# The whole disk a partition (or disk) is on.
+disk_of() {
+    if [ "$(lsblk -n -d -o TYPE "$1")" = disk ]; then echo "$1"
+    else echo "/dev/$(lsblk -n -o PKNAME "$1" | head -1)"; fi
+}
+
+# The stick CatOS is running from, or nothing if it isn't running from one.
+boot_stick() {
+    src=$(findmnt -n -o SOURCE "$medium" 2>/dev/null || true)
+    [ -n "$src" ] || return 0
+    disk=$(disk_of "$src")
+    [ "$(lsblk -n -d -o TRAN "$disk")" = usb ] && echo "$disk"
+    return 0
+}
+
+# Drives it could install to: whole disks that aren't the stick, a USB drive,
+# a CD drive or a RAM disk.
+candidates() {
+    stick=$(boot_stick)
+    lsblk -n -d -p -o NAME,TYPE,TRAN,RO | while read -r name type tran ro; do
+        [ "$type" = disk ] && [ "$ro" = 0 ] || continue
+        [ "$tran" = usb ] && continue
+        [ "$name" = "$stick" ] && continue
+        case $name in /dev/zram*|/dev/loop*) continue ;; esac
+        echo "$name"
+    done
+}
+
+# The partition labelled $2 on disk $1.
+part_labelled() {
+    lsblk -n -l -p -o NAME,LABEL "$1" | awk -v l="$2" '$2 == l { print $1; exit }'
+}
+
+is_installed() {
+    [ -n "$(part_labelled "$1" catos-system)" ] && [ -n "$(part_labelled "$1" catos-data)" ]
+}
+
+json_str() { printf '"%s"' "$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g')"; }
+
+list() {
+    printf '{"from_usb":%s,"drives":[' "$([ -n "$(boot_stick)" ] && echo true || echo false)"
+    first=1
+    for disk in $(candidates); do
+        [ $first = 1 ] || printf ','
+        first=0
+        model=$(lsblk -n -d -o MODEL "$disk" | sed 's/ *$//')
+        size=$(lsblk -n -d -b -o SIZE "$disk")
+        printf '{"path":%s,"model":%s,"size":%s,"installed":%s,"partitions":[' \
+            "$(json_str "$disk")" "$(json_str "$model")" "$size" \
+            "$(is_installed "$disk" && echo true || echo false)"
+        pfirst=1
+        lsblk -n -l -p -b -o NAME,TYPE,SIZE,FSTYPE,LABEL "$disk" |
+        while read -r name type psize fstype label; do
+            [ "$type" = part ] || continue
+            [ $pfirst = 1 ] || printf ','
+            pfirst=0
+            printf '{"path":%s,"size":%s,"fstype":%s,"label":%s}' \
+                "$(json_str "$name")" "$psize" "$(json_str "${fstype:-}")" "$(json_str "${label:-}")"
+        done
+        printf ']}'
+    done
+    printf ']}\n'
+}
+
+# The kernel options for booting from the drive: the stick's own, without the
+# ones that only make sense for it, plus which partitions to use.
+boot_options() {
+    sys_uuid=$1
+    opts=$(tr ' ' '\n' < /proc/cmdline |
+           grep -v -E '^(BOOT_IMAGE|initrd|findiso|live-media|persistence-label)=' |
+           grep -v '^$' | tr '\n' ' ')
+    echo "${opts}live-media=/dev/disk/by-uuid/$sys_uuid persistence-label=catos-data"
+}
+
+# Writes CatOS (the running stick's) onto the system partition mounted at $1,
+# keeping the old files until the new ones are all there.
+write_system() {
+    sys=$1 sys_uuid=$2
+    need=$(du -s -k -L "$medium/live/vmlinuz" "$medium/live/initrd.img" "$medium/live/filesystem.squashfs" |
+           awk '{ t += $1 } END { print t }')
+    free=$(df -k --output=avail "$sys" | tail -1)
+    [ "$free" -gt "$((need + 65536))" ] || fail "not enough space on the system partition for the new CatOS"
+
+    mkdir -p "$sys/live" "$sys/boot/grub"
+    say "copying CatOS (this takes a few minutes)"
+    for f in filesystem.squashfs initrd.img vmlinuz; do
+        cp -L "$medium/live/$f" "$sys/live/$f.new"
+    done
+    sync
+    for f in filesystem.squashfs initrd.img vmlinuz; do
+        mv "$sys/live/$f.new" "$sys/live/$f"
+    done
+    cp "$medium/.disk/info" "$sys/catos-version" 2>/dev/null || true
+
+    cat > "$sys/boot/grub/grub.cfg.new" <<EOF
+# Written by catos-install.
+set default=0
+set timeout_style=hidden
+set timeout=1
+menuentry "CatOS" {
+	linux	/live/vmlinuz $(boot_options "$sys_uuid")
+	initrd	/live/initrd.img
+}
+EOF
+    mv "$sys/boot/grub/grub.cfg.new" "$sys/boot/grub/grub.cfg"
+    sync
+}
+
+# Copies the stick's boot files to the EFI partition mounted at $1 and points
+# them at the system partition.
+write_efi() {
+    efi=$1 sys_uuid=$2
+    say "setting up the boot files"
+    # Shim (Secure Boot) loads grubx64.efi from its own folder. It's the stick's
+    # GRUB, the CD one: it reads its menu from /boot/grub on the partition it
+    # started from, this one. (Not /EFI/debian like an installed Debian's.)
+    for dir in EFI/BOOT EFI/catos; do
+        mkdir -p "$efi/$dir"
+        cp "$medium/EFI/boot/bootx64.efi" "$efi/$dir/BOOTX64.EFI"
+        cp "$medium/EFI/boot/grubx64.efi" "$efi/$dir/grubx64.efi"
+    done
+    mkdir -p "$efi/boot/grub"
+    cat > "$efi/boot/grub/grub.cfg" <<EOF
+# Written by catos-install: CatOS is on the partition with this UUID.
+search --no-floppy --fs-uuid --set=root $sys_uuid
+set prefix=(\$root)/boot/grub
+configfile (\$root)/boot/grub/grub.cfg
+EOF
+    sync
+}
+
+# Adds a "CatOS" entry to the computer's boot menu, first in the boot order.
+# If it can't (or the firmware forgets it), EFI/BOOT/BOOTX64.EFI still boots.
+add_boot_entry() {
+    disk=$1
+    command -v efibootmgr >/dev/null && [ -d /sys/firmware/efi/efivars ] || return 0
+    efibootmgr | sed -n 's/^Boot\([0-9A-F]\{4\}\)\*\{0,1\} CatOS.*/\1/p' | while read -r n; do
+        efibootmgr -q -b "$n" -B || true
+    done
+    efibootmgr -q -c -d "$disk" -p 1 -L CatOS -l '\EFI\catos\BOOTX64.EFI' ||
+        say "couldn't add a boot menu entry; the drive should still boot"
+}
+
+# Copies the stick's saved settings (Wi-Fi, Flex's library, ...) to the data
+# partition mounted at $1, leaving out overlayfs's work folders.
+copy_settings() {
+    data=$1
+    src=$(findmnt -n -o TARGET -S LABEL=persistence 2>/dev/null | head -1 || true)
+    [ -n "$src" ] || return 0
+    say "copying the stick's saved settings"
+    sync
+    excludes=$(cd "$src" && find . -mindepth 2 -maxdepth 6 -type d -name rw |
+               sed 's|/rw$|/work|' | sed 's/^/--exclude=/')
+    # shellcheck disable=SC2086
+    tar -C "$src" --exclude=./lost+found --exclude=./persistence.conf $excludes -cf - . |
+        tar -C "$data" -xpf -
+}
+
+# Settings to keep, the same list as the stick's (catos-persistence knows it).
+write_keep_list() {
+    /usr/local/sbin/catos-persistence --keep-list > "$1/persistence.conf"
+}
+
+mount_tmp() {
+    d=$(mktemp -d)
+    mount "$1" "$d"
+    echo "$d"
+}
+
+cleanup() {
+    for d in ${mounted:-}; do umount "$d" 2>/dev/null && rmdir "$d"; done
+}
+
+install() {
+    disk=${1:?usage: catos-install install DISK}
+    [ -n "$(boot_stick)" ] || fail "CatOS isn't running from a USB stick"
+    candidates | grep -qxF "$disk" || fail "$disk isn't a drive CatOS can install to"
+    [ -d "$medium/live" ] && [ -f "$medium/EFI/boot/bootx64.efi" ] || fail "can't find CatOS's files on the stick"
+    size=$(lsblk -n -d -b -o SIZE "$disk")
+    [ "$size" -ge $((MIN_DISK_GIB * 1024 * 1024 * 1024)) ] || fail "$disk is too small (it needs ${MIN_DISK_GIB} GB)"
+    if lsblk -n -l -o MOUNTPOINTS "$disk" | grep -q .; then
+        fail "something on $disk is in use"
+    fi
+
+    say "erasing $disk"
+    for p in $(lsblk -n -l -p -o NAME,TYPE "$disk" | awk '$2 == "part" { print $1 }'); do
+        wipefs -q -a "$p" 2>/dev/null || true
+    done
+    wipefs -q -a "$disk" >/dev/null 2>&1
+    sfdisk --quiet --wipe always --wipe-partitions always "$disk" >/dev/null <<EOF
+label: gpt
+size=512MiB, type=uefi, name="EFI"
+size=$SYSTEM_SIZE, type=linux, name="catos-system"
+type=linux, name="catos-data"
+EOF
+    partx -u "$disk" 2>/dev/null || true
+    udevadm settle
+    case $disk in *[0-9]) p=${disk}p ;; *) p=$disk ;; esac
+
+    say "formatting"
+    mkfs.vfat -F 32 -n CATOS-EFI "${p}1" >/dev/null
+    mkfs.ext4 -q -F -L catos-system "${p}2"
+    mkfs.ext4 -q -F -L catos-data "${p}3"
+    udevadm settle
+    sys_uuid=$(blkid -s UUID -o value "${p}2")
+
+    trap cleanup EXIT
+    sys=$(mount_tmp "${p}2"); mounted="$sys"
+    efi=$(mount_tmp "${p}1"); mounted="$mounted $efi"
+    data=$(mount_tmp "${p}3"); mounted="$mounted $data"
+
+    write_system "$sys" "$sys_uuid"
+    write_efi "$efi" "$sys_uuid"
+    write_keep_list "$data"
+    copy_settings "$data"
+    sync
+    add_boot_entry "$disk"
+    say "done"
+}
+
+update() {
+    [ -n "$(boot_stick)" ] || fail "CatOS isn't running from a USB stick"
+    disks=$(for d in $(candidates); do if is_installed "$d"; then echo "$d"; fi; done)
+    [ -n "$disks" ] || fail "there's no drive with CatOS on it"
+    [ "$(echo "$disks" | wc -l)" -eq 1 ] || fail "more than one drive has CatOS on it"
+    disk=$disks
+    sys_part=$(part_labelled "$disk" catos-system)
+    efi_part=$(lsblk -n -l -p -o NAME,PARTTYPE "$disk" |
+               awk '$2 == "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" { print $1; exit }')
+    [ -n "$efi_part" ] || fail "can't find the EFI partition on $disk"
+    sys_uuid=$(blkid -s UUID -o value "$sys_part")
+    say "updating CatOS on $disk"
+
+    trap cleanup EXIT
+    sys=$(mount_tmp "$sys_part"); mounted="$sys"
+    efi=$(mount_tmp "$efi_part"); mounted="$mounted $efi"
+    write_system "$sys" "$sys_uuid"
+    write_efi "$efi" "$sys_uuid"
+    add_boot_entry "$disk"
+    say "done"
+}
+
+[ "$(id -u)" = 0 ] || fail "needs to run as root"
+case ${1:-} in
+    list) list ;;
+    install) install "${2:-}" ;;
+    update) update ;;
+    *) echo "usage: catos-install list | install DISK | update" >&2; exit 2 ;;
+esac

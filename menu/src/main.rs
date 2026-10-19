@@ -15,6 +15,7 @@ mod avatar;
 mod config;
 mod display;
 mod icons;
+mod install;
 mod keyboard;
 #[cfg(target_os = "linux")]
 mod remote;
@@ -90,6 +91,7 @@ enum Overlay {
     Sound { outputs: Vec<audio::Output>, sel: usize },
     Wifi(wifi::Menu),
     Display(display::Menu),
+    Install(install::Menu),
 }
 
 /// An app waiting for the fade-out to finish before it starts.
@@ -197,6 +199,12 @@ impl Menu {
                 self.resolution = None; // it may have changed
                 return;
             }
+            Some(Overlay::Install(menu)) => {
+                if !menu.update(ctx) {
+                    self.overlay = None;
+                }
+                return;
+            }
             None => {}
         }
         let n_items = self.cfg.category[self.cat].item.len();
@@ -252,6 +260,7 @@ impl Menu {
             }
             Some("wifi") => self.overlay = Some(Overlay::Wifi(wifi::Menu::open())),
             Some("resolution") => self.overlay = Some(Overlay::Display(display::Menu::open())),
+            Some("install") => self.overlay = Some(Overlay::Install(install::Menu::open())),
             Some(_) => {}
             None if !command.is_empty() => {
                 // Fade out first; ui() starts the app when the fade is done.
@@ -459,6 +468,7 @@ impl Menu {
             }
             Some(Overlay::Wifi(menu)) => menu.draw(p, screen, list_at, s, t),
             Some(Overlay::Display(menu)) => menu.draw(p, list_at, s),
+            Some(Overlay::Install(menu)) => menu.draw(p, list_at, s, t),
             None => {}
         }
 

@@ -90,6 +90,12 @@ icon = "gear"
   action = "network"
 
   [[category.item]]
+  name = "Install to drive"
+  icon = "gear"
+  description = "Put CatOS on this computer's own drive, or update it there"
+  action = "install"
+
+  [[category.item]]
   name = "Restart"
   icon = "restart"
   description = "Restart the TV box"
